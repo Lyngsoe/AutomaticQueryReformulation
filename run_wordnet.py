@@ -6,8 +6,10 @@ from wordnet_model import WordnetModel
 import numpy as np
 import json
 
-search_engine = LUCENE()
-dataset = CAR(debug=True)
+debug = True
+
+search_engine = LUCENE(debug=debug)
+dataset = CAR(debug=debug)
 model = WordnetModel()
 
 queries = dataset.get_queries()
@@ -39,6 +41,6 @@ for query in tqdm(queries,desc="calc recall"):
     recall10.append(len(intersec)/10)
 
 
-print("recall 10:",np.mean(recall10))
+print("\nrecall 10:",np.mean(recall10))
 
-json.dump(queries,open("results.json",'w'))
+json.dump(queries,open("results_wordnet_debug.json",'w'))

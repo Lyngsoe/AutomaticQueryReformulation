@@ -7,7 +7,12 @@ class WordnetModel:
         for word in tokens:
             i = 0
             for syn in wordnet.synsets(word):
-                if syn.name() not in reformed:
-                    reformed+=" "+syn.name()
-                if i > 3:
-                    break
+                for lemma in syn.lemmas():
+                    if lemma.name() not in reformed.lower():
+                        sym = lemma.name()
+                        sym = sym.replace("_"," ")
+                        reformed+=" "+sym
+                        i+=1
+                    if i > 3:
+                        break
+        return reformed
