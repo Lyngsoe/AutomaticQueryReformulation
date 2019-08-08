@@ -1,6 +1,8 @@
 from nltk.corpus import wordnet
 from nltk.tokenize import word_tokenize
 class WordnetModel:
+    def __init__(self):
+        self.name = "wordnet_model"
     def reform(self,query):
         tokens = word_tokenize(query)
         reformed = query

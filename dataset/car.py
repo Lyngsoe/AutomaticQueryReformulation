@@ -81,7 +81,7 @@ class CAR:
                          else elem.anchor_text
                          for elem in p.bodies]
 
-                paras.append((' '.join(texts),p.para_id))
+                paras.append({"txt":' '.join(texts),"para_id":p.para_id})
 
         return paras
 
@@ -108,8 +108,15 @@ class CAR:
 
         for line in open(self.qrels_path,'r'):
             data = line.split(" ")
-            paraset = wiki2para.get(data[0],set())
+            paraset = wiki2para.get(data[0])
+
+            if paraset is None:
+                paraset = set()
+
+            paraset.add(data[2])
+
             wiki2para.update({data[0]:paraset})
+            #print(wiki2para.get(data[0]))
             para2wiki.update({data[2]:data[0]})
 
         return para2wiki,wiki2para
