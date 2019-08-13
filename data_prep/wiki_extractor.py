@@ -2219,7 +2219,7 @@ def compact(text):
         # Handle section titles
         m = section.match(line)
         if m:
-            title = m.group(0)
+            title = "\n"+m.group(0)+"\n"
             lev = len(m.group(1))  # header level
             if options.toHTML:
                 page.append("<h%d>%s</h%d>" % (lev, title, lev))
@@ -2234,13 +2234,6 @@ def compact(text):
             listLevel = []
             listCount = []
             continue
-        # Handle page title
-        elif line.startswith('++'):
-            title = line[2:-2]
-            if title:
-                if title[-1] not in '!?':
-                    title += '.'
-                page.append(title)
         # handle indents
         elif line[0] == ':':
             # page.append(line.lstrip(':*#;'))

@@ -5,11 +5,9 @@ from data_prep.wiki_id_generator import generate_paragraphs_and_annotations
 
 def Heading_pattern(number):
     string = "="*number
-    return "\n{0,2}[^=\n]"+string+"([^=])+?"+string+"[^=\n]\.{0,1}"
+    return "\n[^=]"+string+"([^=])+?"+string+"[^=]"
 
 def extract_page_headlines(page_string,heading):
-    if heading == 2:
-        print(page_string,"\n###########################")
     matches = list(re.finditer(Heading_pattern(heading), page_string))
     page = {}
 
@@ -30,7 +28,6 @@ def extract_page_headlines(page_string,heading):
         name = name.replace(".","")
         p_start = span[1]+1
         if i == len(matches)-1:
-            print("end",name)
             heading_text = page_string[p_start:]
         else:
             next_idx = i + 1
@@ -61,15 +58,22 @@ def extract_sub_headings(page_string,heading):
     return page
 
 
+def remove_title(page_txt):
+    lines = page_txt.split("\n")
+    no_title_txt = "\n".join(lines[1:])
+    return no_title_txt
+
 def extract_headline(page):
     outline_page = {"title":page["title"],"url":page["url"]}
     #print(page["text"])
     for i in range(2,6):
-        outline = extract_page_headlines(page["text"],i)
+        p_text = remove_title(page["text"])
+        outline = extract_page_headlines(p_text,i)
 
         if outline is not None and outline is not {}:
             outline_page.update({"outline": outline})
             return outline_page
 
-    outline_page.update({"outline": {"title":page["text"]}})
+    outline_page.update({"outline": {page["title"]:page["text"]}})
     return outline_page
+
