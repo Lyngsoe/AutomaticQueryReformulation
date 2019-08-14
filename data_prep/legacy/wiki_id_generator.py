@@ -99,3 +99,31 @@ def outline_to_query(base,outline):
             query_strings.extend(sub_query_strings)
 
     return query_strings
+
+
+def delete_paras(paras,annotations,outlines,paras_to_delete):
+    outlines = outlines
+    paras = paras
+    annotations = annotations
+    for para in paras_to_delete:
+        paras = delete_para_from_paras(para,paras)
+        annotation = delete_para_from_annotations(para,annotations)
+
+    return paras,annotations,outlines
+
+
+def delete_para_from_paras(para,paras):
+    paras.remove(para)
+    return paras
+
+def delete_para_from_annotations(para, annotations):
+    wikis_to_update = {}
+    for wiki,paras in annotations.items():
+        try:
+            p = paras.remove(para)
+            wikis_to_update.update({wiki:p})
+        except ValueError:
+            continue
+
+    annotations.update(wikis_to_update)
+    return annotations

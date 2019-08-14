@@ -1,6 +1,7 @@
 import jsonlines
 from data_prep.headline_parser import extract_headline
 from data_prep.wiki_id_generator import generate_paragraphs_and_annotations,generate_queries
+
 import os
 
 def get_data_paths(base_path):
