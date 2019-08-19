@@ -1,4 +1,5 @@
 import requests
+import re
 
 def get_wikidata_id(page_name,lang):
 
@@ -8,10 +9,9 @@ def get_wikidata_id(page_name,lang):
 
     query = body["query"]
     pages = query["pages"]
-
+    #print(body)
     if len(list(pages.keys())) != 1:
-        raise Exception
-        #raise Exception("multiple pages returned: {]".format(body))
+        raise Exception("multiple pages returned: {]".format(body))
 
     #print(body)
     key = list(pages.keys())[0]
@@ -20,7 +20,6 @@ def get_wikidata_id(page_name,lang):
     wikidata_id = pageprops["wikibase_item"]
 
     return wikidata_id
-
 
 if __name__ == "__main__":
 

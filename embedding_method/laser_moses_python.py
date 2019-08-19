@@ -16,6 +16,7 @@ import time
 import multiprocessing
 from itertools import repeat
 from tqdm import tqdm
+from laserembeddings.preprocessing import Tokenizer
 
 # Path to static storage
 STATIC_STORAGE_PATH = "pretrained_embeddings/laser"
@@ -119,32 +120,28 @@ class LaserSentenceEmbeddings:
             pbar = tqdm(total=len(text), desc="tokenizing sentences",miniters=1000)
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
-                future_to_tokenize = {executor.submit(self._call_perl_scripts, t, language): t for t in text}
+                future_to_tokenize = {executor.submit(self._call_tokenizer, t, language): t for t in text}
                 for future in concurrent.futures.as_completed(future_to_tokenize):
                     results = future_to_tokenize[future]
                     try:
                         tokenized.append(future.result())
-                        pbar.update()
+
                     except Exception as exc:
                         tqdm.write('%r generated an exception: %s' % (results, exc))
                         raise exc
+                    pbar.update()
 
 
         return tokenized
 
 
 
-    def _call_perl_scripts(self, text_string, language):
-        #with suppress_stderr():
-        tok = check_output(
-            self.REM_NON_PRINT_CHAR
-            + ' | ' + self.NORM_PUNC + NORM_PUNC_ARGS + " " + language
-            + ' | ' + self.DESCAPE
-            + ' | ' + self.MOSES_TOKENIZER + MOSES_TOKENIZER_ARGS + " " + language,
-            input=text_string,
-            encoding='UTF-8',
-            shell=True)
-        return tok.strip()
+    def _call_tokenizer(self, text_string, language):
+        sentence_tokens = self._get_tokenizer(language).tokenize(text_string)
+        return sentence_tokens
+
+    def _get_tokenizer(self, lang: str) -> Tokenizer:
+        return Tokenizer(lang)
 
     def _bpe(self, line):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -280,7 +277,7 @@ class LaserSentenceEmbeddings:
         def encode_sentences(self, sentences):
             indices = []
             results = []
-            pbar = tqdm(total=int(len(sentences)/self.max_sentences),desc="embedding sentences")
+            pbar = tqdm(total=int(len(sentences)/self.max_sentences),desc="embedding sentences",miniters=1000)
             for batch, batch_indices in self._make_batches(sentences):
                 indices.extend(batch_indices)
                 results.append(self._process_batch(batch))

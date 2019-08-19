@@ -1,4 +1,5 @@
-from embedding_method.laser import LaserSentenceEmbeddings
+#from embedding_method.laser import LaserSentenceEmbeddings
+from embedding_method.laser_moses_python import LaserSentenceEmbeddings
 from datasketch import MinHash,MinHashLSH
 import copy
 from tqdm import tqdm
@@ -12,7 +13,8 @@ def delete_paras_from_paragraphs(paras_to_delete,paragraphs):
             if para["id"] == p[1]:
                 del_idx = i
                 break
-        paragraphs.pop(del_idx)
+        if del_idx is not None:
+            paragraphs.pop(del_idx)
     return paragraphs
 
 def delete_para_from_annotations(paras_to_delete, annotations):
@@ -26,7 +28,7 @@ def delete_para_from_annotations(paras_to_delete, annotations):
                     new_paras.remove(para_id)
                     new_paras.append(p[0])
                     paras=new_paras
-            new_annotations.update({wiki: paras})
+        new_annotations.update({wiki: paras})
 
     return new_annotations
 
@@ -36,8 +38,9 @@ def create_min_hash(embedding,id,num_perm):
         mh.update(emb)
     return (id,mh)
 
-def remove_duplicates(paragraphs,annotations,language="da"):
-    embedder = LaserSentenceEmbeddings(max_batch_size=100)
+def remove_duplicates(paragraphs,annotations,language,batch_size):
+
+    embedder = LaserSentenceEmbeddings(max_batch_size=batch_size)
     text_to_emb = [para["text"] for para in paragraphs]
     embeddings = embedder(text_to_emb, method='sentence', language=language)
     min_hashes = []
@@ -45,7 +48,7 @@ def remove_duplicates(paragraphs,annotations,language="da"):
     number_of_cpus = multiprocessing.cpu_count()
     data = zip(embeddings,paragraphs)
 
-    with tqdm(total=len(paragraphs), desc="min hashing paragraphs") as pbar:
+    with tqdm(total=len(paragraphs), desc="min hashing paragraphs",miniters=1000) as pbar:
         with concurrent.futures.ThreadPoolExecutor(max_workers=number_of_cpus) as executor:
             future_to_min_hash = {executor.submit(create_min_hash,embedding,para["id"],num_perm=num_perm): (embedding,para) for embedding,para in data}
             for future in concurrent.futures.as_completed(future_to_min_hash):
@@ -54,8 +57,9 @@ def remove_duplicates(paragraphs,annotations,language="da"):
                     min_hashes.append(future.result())
                 except Exception as exc:
                     tqdm.write('%r generated an exception: %s' % (results, exc))
+                    raise exc
 
-                pbar.update(1)
+                pbar.update()
 
     lsh = MinHashLSH(threshold=0.95,num_perm=num_perm)
 
@@ -83,5 +87,5 @@ def remove_duplicates(paragraphs,annotations,language="da"):
 
     paragraphs = delete_paras_from_paragraphs(paras_to_delete,paragraphs)
     annotations = delete_para_from_annotations(paras_to_delete,annotations)
-    tqdm.write("\n#duplicate paras deleted:",len(paras_to_delete))
+    tqdm.write("\n#duplicate paras deleted: {}".format(len(paras_to_delete)))
     return paragraphs,annotations

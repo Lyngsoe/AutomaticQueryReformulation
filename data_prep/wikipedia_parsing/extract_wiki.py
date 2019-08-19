@@ -1,4 +1,4 @@
-from data_prep.wiki_extractor import parse_wiki_dump
+from data_prep.wikipedia_parsing.wiki_extractor import parse_wiki_dump
 from tqdm import tqdm
 
 def extract_wiki(input_path = "/home/jonas/data/wiki/dawiki-20190801-pages-articles.xml",

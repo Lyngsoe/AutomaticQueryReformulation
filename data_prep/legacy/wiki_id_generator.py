@@ -1,5 +1,5 @@
 import hashlib
-from data_prep.wiki_cleaner import clean_text,split_paragraphs
+from data_prep.wikipedia_parsing.wiki_cleaner import split_paragraphs
 import re
 ONLY_ONE_SPACE = " +"
 

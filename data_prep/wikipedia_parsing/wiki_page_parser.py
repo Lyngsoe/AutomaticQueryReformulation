@@ -1,5 +1,5 @@
 import re
-from data_prep.wiki_cleaner import split_paragraphs
+from data_prep.wikipedia_parsing.wiki_cleaner import split_paragraphs
 import hashlib
 
 MIN_SECTION_LENGTH = 3
@@ -110,18 +110,12 @@ def extract_page_paragraphs(page_string,heading_nr):
 
 
 
-def parse_paragraphs_and_annotations(page):
+def extract_paragraphs_and_annotations(page):
     p_text = remove_title(page["text"])
     for i in range(2, 6):
         paragraphs = extract_page_paragraphs(p_text, i)
         if paragraphs is not None and paragraphs is not []:
             annotations = {page["url"]:[para["id"] for para in paragraphs]}
-
-#            if page["url"] == "https://da.wikipedia.org/wiki?curid=468378":
-#                print(page["text"])
-#                print(p_text)
-#                print(paragraphs)
-#                raise Exception
             return paragraphs,annotations
 
     return [],{}

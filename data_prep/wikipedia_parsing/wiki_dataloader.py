@@ -3,13 +3,13 @@ import jsonlines
 from tqdm import tqdm
 
 class WikiDataloader:
-    def __init__(self,base_path = "/home/jonas/data/wiki/parsed_wiki",max_pages=-1):
+    def __init__(self,base_path,max_pages=-1):
         self.base_path = base_path
         self.data_paths = self.get_data_paths()
         self.current_data_file = 0
         self.pages_read = 0
         self.max_pages = max_pages
-        self.pbar = tqdm(total=len(self.data_paths),desc="wiki files")
+        self.pbar = tqdm(total=len(self.data_paths),desc="parsing wiki files")
         self.json_iter = self.next_iter()
 
     def get_data_paths(self):
@@ -27,17 +27,21 @@ class WikiDataloader:
             self.pbar.update(1)
             return iter
         else:
+            self.pbar.close()
             return None
 
     def get_next(self):
         if self.max_pages != -1 and self.pages_read > self.max_pages:
+            self.pbar.close()
             return None
+
 
         try:
             data_point = self.json_iter.read()
         except EOFError:
             self.json_iter = self.next_iter()
             if self.json_iter is None:
+                self.pbar.close()
                 return None
             data_point = self.json_iter.read()
 
@@ -47,11 +51,13 @@ class WikiDataloader:
     def get_next_batch(self):
 
         if self.max_pages != -1 and self.pages_read > self.max_pages:
+            self.pbar.close()
             return None
 
         pages = []
 
         if self.json_iter is None:
+            self.pbar.close()
             return None
 
         for p in self.json_iter:
