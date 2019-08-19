@@ -44,5 +44,23 @@ class WikiDataloader:
         self.pages_read+=1
         return data_point
 
+    def get_next_batch(self):
 
+        if self.max_pages != -1 and self.pages_read > self.max_pages:
+            return None
+
+        pages = []
+
+        if self.json_iter is None:
+            return None
+
+        for p in self.json_iter:
+            pages.append(p)
+            self.pages_read+=1
+
+            if self.max_pages != -1 and self.pages_read > self.max_pages:
+                break
+
+        self.json_iter = self.next_iter()
+        return pages
 

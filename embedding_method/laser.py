@@ -9,6 +9,7 @@ from collections import namedtuple
 
 import sys
 
+import concurrent.futures
 import torch
 import numpy as np
 import time
@@ -23,7 +24,7 @@ TOKENIZER_TOOLS_PATH = "tools/tokenizer"
 
 # Script names and args
 MOSES_TOKENIZER_NAME = "tokenizer.perl"
-MOSES_TOKENIZER_ARGS = f" -q -no-escape -threads {multiprocessing.cpu_count()} -l"
+MOSES_TOKENIZER_ARGS = " -q -no-escape -threads 20 -l"
 
 DESCAPE_NAME = "deescape-special-chars.perl"
 
@@ -109,26 +110,40 @@ class LaserSentenceEmbeddings:
             text = [text]
         text = [x.lower().replace("\n", " ") for x in text]
 
-        # TODO: Take each perl script used below and rewrite to python
 
+        # TODO: Take each perl script used below and rewrite to python
         if len(text) < 10:
             tokenized = [self._call_perl_scripts(txt, language) for txt in text]
         else:
-            with multiprocessing.Pool() as p:
-                tokenized = p.starmap(self._call_perl_scripts, zip(text, repeat(language)))
+            tokenized = []
+            pbar = tqdm(total=len(text), desc="tokenizing sentences",miniters=1000)
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+                future_to_tokenize = {executor.submit(self._call_perl_scripts, t, language): t for t in text}
+                for future in concurrent.futures.as_completed(future_to_tokenize):
+                    results = future_to_tokenize[future]
+                    try:
+                        tokenized.append(future.result())
+                        pbar.update()
+                    except Exception as exc:
+                        tqdm.write('%r generated an exception: %s' % (results, exc))
+                        pbar.update()
+
 
         return tokenized
 
+
+
     def _call_perl_scripts(self, text_string, language):
-        with suppress_stderr():
-            tok = check_output(
-                self.REM_NON_PRINT_CHAR
-                + ' | ' + self.NORM_PUNC + NORM_PUNC_ARGS + " " + language
-                + ' | ' + self.DESCAPE
-                + ' | ' + self.MOSES_TOKENIZER + MOSES_TOKENIZER_ARGS + " " + language,
-                input=text_string,
-                encoding='UTF-8',
-                shell=True)
+        #with suppress_stderr():
+        tok = check_output(
+            self.REM_NON_PRINT_CHAR
+            + ' | ' + self.NORM_PUNC + NORM_PUNC_ARGS + " " + language
+            + ' | ' + self.DESCAPE
+            + ' | ' + self.MOSES_TOKENIZER + MOSES_TOKENIZER_ARGS + " " + language,
+            input=text_string,
+            encoding='UTF-8',
+            shell=True)
         return tok.strip()
 
     def _bpe(self, line):
@@ -265,9 +280,11 @@ class LaserSentenceEmbeddings:
         def encode_sentences(self, sentences):
             indices = []
             results = []
-            for batch, batch_indices in tqdm(self._make_batches(sentences),desc="embedding sentences"):
+            pbar = tqdm(total=int(len(sentences)/self.max_sentences),desc="embedding sentences")
+            for batch, batch_indices in self._make_batches(sentences):
                 indices.extend(batch_indices)
                 results.append(self._process_batch(batch))
+                pbar.update(1)
             return np.vstack(results)[np.argsort(indices, kind=self.sort_kind)]
 
         def __call__(self, *args, **kwargs):
@@ -314,11 +331,9 @@ if __name__ == '__main__':
 
     data_list = ["Jeg vil gerne have lavet den her sætning om til embeddings",
                  "Jeg vil også gerne have den her sætning lavet om, tak"] * 10
-
     # Create BPE embeddings - (bpe_len x 320) pr element
     bpe_embeddings_list = embedder(data_list, method='bpe', language='da')  # With list input
     bpe_embeddings_string = embedder(data_list[0], method='bpe', language='da')  # With string input
-
     # Create laser embeddings (1x1024) pr element
     laser_embeddings_list = embedder(data_list, method='sentence', language='da')  # With list input
     laser_embeddings_string = embedder(data_list[0], method='sentence', language='da')  # With string input

@@ -8,3 +8,12 @@ price to translate: 20 dollars per million chars
 counting only outlines: 38 199 147
 price to translate: 20 dollars per million chars
 20 * 40 mil * 5 = 4 000 kr
+
+
+## Google Natural questions
+12439519 mil chars
+20 * 12 = 240 dollars per language
+20 * 12 * 5 = 1200 kr per language
+
+candidate languages: Danish, german, spanish french, italian
+
