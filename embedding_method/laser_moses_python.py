@@ -48,7 +48,7 @@ Batch = namedtuple('Batch', 'srcs tokens lengths')
 
 class LaserSentenceEmbeddings:
 
-    def __init__(self, max_batch_size=500):
+    def __init__(self, max_batch_size=500, cpu=True):
 
         # Download necessary files
         self.file_dir = require_static_directory(STATIC_STORAGE_PATH)
@@ -117,10 +117,10 @@ class LaserSentenceEmbeddings:
             tokenized = [self._call_perl_scripts(txt, language) for txt in text]
         else:
             tokenized = []
-            pbar = tqdm(total=len(text), desc="tokenizing sentences",miniters=1000)
+            pbar = tqdm(total=len(text), desc="tokenizing sentences",miniters=10)
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
-                future_to_tokenize = {executor.submit(self._call_tokenizer, t, language): t for t in text}
+                future_to_tokenize = {executor.submit(self._call_tokenizer, t, language,pbar): t for t in text}
                 for future in concurrent.futures.as_completed(future_to_tokenize):
                     results = future_to_tokenize[future]
                     try:
@@ -129,15 +129,16 @@ class LaserSentenceEmbeddings:
                     except Exception as exc:
                         tqdm.write('%r generated an exception: %s' % (results, exc))
                         raise exc
-                    pbar.update()
+
 
 
         return tokenized
 
 
 
-    def _call_tokenizer(self, text_string, language):
+    def _call_tokenizer(self, text_string, language,pbar):
         sentence_tokens = self._get_tokenizer(language).tokenize(text_string)
+        pbar.update()
         return sentence_tokens
 
     def _get_tokenizer(self, lang: str) -> Tokenizer:

@@ -1,4 +1,4 @@
-#from embedding_method.laser import LaserSentenceEmbeddings
+from embedding_method.laser import LaserSentenceEmbeddings
 from embedding_method.laser_moses_python import LaserSentenceEmbeddings
 from datasketch import MinHash,MinHashLSH
 import copy
@@ -34,23 +34,26 @@ def delete_para_from_annotations(paras_to_delete, annotations):
 
 def create_min_hash(embedding,id,num_perm):
     mh = MinHash(num_perm=num_perm)
-    for emb in embedding:
-        mh.update(emb)
+    #for emb in embedding:
+        #mh.update(emb)
+    mh.update(embedding)
     return (id,mh)
 
-def remove_duplicates(paragraphs,annotations,language,batch_size):
+def remove_duplicates(embeddings,paragraphs,annotations):
 
-    embedder = LaserSentenceEmbeddings(max_batch_size=batch_size)
-    text_to_emb = [para["text"] for para in paragraphs]
-    embeddings = embedder(text_to_emb, method='sentence', language=language)
+
+
+    #embedder = LaserSentenceEmbeddings(max_batch_size=batch_size,cpu=cpu)
+    #embeddings = embedder(text_to_emb, method='sentence', language=language)
+    #embeddings = embedder(text_to_emb, method='bpe', language=language)
+
     min_hashes = []
-    num_perm = int(len(paragraphs)/2)
+    num_perm = 128
     number_of_cpus = multiprocessing.cpu_count()
-    data = zip(embeddings,paragraphs)
 
-    with tqdm(total=len(paragraphs), desc="min hashing paragraphs",miniters=1000) as pbar:
+    with tqdm(total=len(embeddings.keys()), desc="min hashing paragraphs") as pbar:
         with concurrent.futures.ThreadPoolExecutor(max_workers=number_of_cpus) as executor:
-            future_to_min_hash = {executor.submit(create_min_hash,embedding,para["id"],num_perm=num_perm): (embedding,para) for embedding,para in data}
+            future_to_min_hash = {executor.submit(create_min_hash,embedding,para_id,num_perm=num_perm): (para_id,embedding) for para_id,embedding in embeddings.items()}
             for future in concurrent.futures.as_completed(future_to_min_hash):
                 results = future_to_min_hash[future]
                 try:
@@ -89,3 +92,50 @@ def remove_duplicates(paragraphs,annotations,language,batch_size):
     annotations = delete_para_from_annotations(paras_to_delete,annotations)
     tqdm.write("\n#duplicate paras deleted: {}".format(len(paras_to_delete)))
     return paragraphs,annotations
+
+
+def find_duplicates(embeddings):
+    min_hashes = []
+    num_perm = 128
+    number_of_cpus = multiprocessing.cpu_count()
+
+    print(embeddings.keys())
+
+    with tqdm(total=len(embeddings.keys()), desc="min hashing paragraphs") as pbar:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=number_of_cpus) as executor:
+            future_to_min_hash = {
+                executor.submit(create_min_hash, embedding, para_id, num_perm=num_perm): (para_id, embedding) for
+                para_id, embedding in embeddings.items()}
+            for future in concurrent.futures.as_completed(future_to_min_hash):
+                results = future_to_min_hash[future]
+                try:
+                    min_hashes.append(future.result())
+                except Exception as exc:
+                    tqdm.write('%r generated an exception: %s' % (results, exc))
+                    raise exc
+
+                pbar.update()
+
+    lsh = MinHashLSH(threshold=0.95, num_perm=num_perm)
+
+    for id, mh in tqdm(min_hashes, desc="adding MinHash to LSH index"):
+        if id not in lsh.keys:
+            lsh.insert("{}".format(id), mh)
+
+    paras_to_delete = []
+    for id, mh in tqdm(min_hashes, desc="finding similar paragraphs"):
+        result = lsh.query(mh)
+        cur_para = id
+        try:
+            result.remove(id)
+        except ValueError:
+            pass
+
+        if len(result) > 0:
+            for res in result:
+                res_para = res
+                if (cur_para, res_para) not in paras_to_delete and (res_para, cur_para) not in paras_to_delete:
+                    # print("replace:",res_para,"with:",cur_para)
+                    paras_to_delete.append((cur_para, res_para))
+
+    return paras_to_delete

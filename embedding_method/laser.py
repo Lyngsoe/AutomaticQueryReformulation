@@ -116,7 +116,7 @@ class LaserSentenceEmbeddings:
             tokenized = [self._call_perl_scripts(txt, language) for txt in text]
         else:
             tokenized = []
-            pbar = tqdm(total=len(text), desc="tokenizing sentences",miniters=1000)
+            pbar = tqdm(total=len(text), desc="tokenizing sentences",miniters=100)
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
                 future_to_tokenize = {executor.submit(self._call_perl_scripts, t, language): t for t in text}

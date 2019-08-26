@@ -1,23 +1,28 @@
 import requests
 import re
+import html
 
 def get_wikidata_id(page_name,lang):
-
     url = "https://{}.wikipedia.org/w/api.php?action=query&format=json&prop=pageprops&ppprop=wikibase_item&redirects=1&titles={}".format(lang,page_name)
-    resp = requests.get(url)
-    body = resp.json()
+    try:
+        resp = requests.get(url)
+        body = resp.json()
 
-    query = body["query"]
-    pages = query["pages"]
-    #print(body)
-    if len(list(pages.keys())) != 1:
-        raise Exception("multiple pages returned: {]".format(body))
+        query = body["query"]
+        pages = query["pages"]
+        #print(body)
+        if len(list(pages.keys())) != 1:
+            raise Exception("multiple pages returned: {]".format(body))
 
-    #print(body)
-    key = list(pages.keys())[0]
-    page = pages[key]
-    pageprops = page["pageprops"]
-    wikidata_id = pageprops["wikibase_item"]
+        #print(body)
+        key = list(pages.keys())[0]
+        page = pages[key]
+        pageprops = page["pageprops"]
+        wikidata_id = pageprops["wikibase_item"]
+    except:
+        print(body)
+        print(url)
+        print(page_name)
 
     return wikidata_id
 

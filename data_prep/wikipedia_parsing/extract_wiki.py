@@ -24,3 +24,11 @@ def extract_wiki(input_path = "/home/jonas/data/wiki/dawiki-20190801-pages-artic
                         quiet=True)
 
     return output_path
+
+
+if __name__ == '__main__':
+
+    input_path = "/media/jonas/archive/wikis/enwiki-20190801-pages-articles.xml"
+    lang = "en"
+
+    out_path = extract_wiki(input_path=input_path,language=lang)
