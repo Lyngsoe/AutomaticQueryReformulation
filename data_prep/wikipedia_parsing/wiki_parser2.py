@@ -18,6 +18,9 @@ class WikiParser:
         self.temp_save_path = self.save_path + "temp/"
         self.embedding_save_path = save_path+"embeddings/"
 
+        os.makedirs(self.temp_save_path,exist_ok=True)
+        os.makedirs(self.embedding_save_path, exist_ok=True)
+
         self.language = language
         self.debug = debug
         self.wiki_data = wiki_data
@@ -248,6 +251,6 @@ if __name__ == '__main__':
     drive_path = "/media/jonas/archive/"
 
     load_path = drive_path+"master/data/extracted_wiki/{}/".format(wiki_lang)
-    save_path = drive_path+"master/data/raffle_wiki/{}/".format(wiki_lang)
+    save_path = "/home/jonas/data/raffle_wiki/{}/".format(wiki_lang)
 
     WikiParser(load_path,save_path,wiki_lang,debug=False)

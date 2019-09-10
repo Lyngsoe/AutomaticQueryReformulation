@@ -99,8 +99,6 @@ def find_duplicates(embeddings):
     num_perm = 128
     number_of_cpus = multiprocessing.cpu_count()
 
-    print(embeddings.keys())
-
     with tqdm(total=len(embeddings.keys()), desc="min hashing paragraphs") as pbar:
         with concurrent.futures.ThreadPoolExecutor(max_workers=number_of_cpus) as executor:
             future_to_min_hash = {
