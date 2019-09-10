@@ -26,7 +26,7 @@ class WikiParser:
         self.debug = debug
         self.wiki_data = wiki_data
         self.max_pages = 100 if self.debug else -1
-        self.batch_size = 10 if self.debug else 300
+        self.batch_size = 10 if self.debug else 10
 
         self.number_of_paras = 0
         self.number_of_wikis = 0
@@ -37,7 +37,7 @@ class WikiParser:
         #### RUN LOGIC ####
         self.parse_wiki()
 
-        self.embedder = LaserEmbeddingCreator(self.embedding_save_path,self.batch_size,self.save_path + "temp/paragraphs.jsonl",self.number_of_paras,self.language)
+        self.embedder = LaserEmbeddingCreator(self.embedding_save_path,self.batch_size,self.save_path + "temp/paragraphs.jsonl",self.number_of_paras,self.language,self.save_path + "queries.jsonl",self.number_of_queries)
 
         self._remove_duplicates()
         self._save_final_info()
@@ -197,7 +197,7 @@ class WikiParser:
         json.dump(url2para,open(path+"url2para.json",'w'))
 
     def _save_queries(self,path,queries):
-        pbar = tqdm(total=self.number_of_paras, desc="saving queries")
+        pbar = tqdm(total=self.number_of_queries, desc="saving queries")
         writer = jsonlines.open(path+"queries.jsonl",'w')
         for q in queries:
             writer.write(q)
@@ -210,13 +210,13 @@ if __name__ == '__main__':
 
     wiki_lang = "da"
 
-    #drive_path = "/media/jonas/archive/"
-    drive_path = "/home/jonas/data/"
+    drive_path = "/media/jonas/archive/"
+    #drive_path = "/home/jonas/data/"
 
-    #load_path = drive_path+"master/data/extracted_wiki/{}/".format(wiki_lang)
-    #save_path = drive_path+"master/data/raffle_wiki/{}/".format(wiki_lang)
+    load_path = drive_path+"master/data/extracted_wiki/{}/".format(wiki_lang)
+    save_path = drive_path+"master/data/raffle_wiki/{}/".format(wiki_lang)
 
-    load_path = drive_path + "wiki/extracted_wiki/{}/".format(wiki_lang)
-    save_path = drive_path + "wiki/raffle_wiki/{}/".format(wiki_lang)
+    #load_path = drive_path + "wiki/extracted_wiki/{}/".format(wiki_lang)
+    #save_path = drive_path + "wiki/raffle_wiki/{}/".format(wiki_lang)
 
     WikiParser(load_path,save_path,wiki_lang,debug=True)

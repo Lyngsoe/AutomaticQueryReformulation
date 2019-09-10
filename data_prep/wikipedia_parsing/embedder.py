@@ -7,7 +7,7 @@ import mmap
 import numpy as np
 
 class LaserEmbeddingCreator:
-    def __init__(self,path,batch_size,paragraph_path,number_of_paras,language):
+    def __init__(self,path,batch_size,paragraph_path,number_of_paras,language,query_path,number_of_queries):
         self.method = "LASER"
         self.path = path
         self.batch_size = batch_size
@@ -16,11 +16,14 @@ class LaserEmbeddingCreator:
         self.number_of_paras = number_of_paras
         self.language = language
         self.paragraph_path = paragraph_path
+        self.query_path = query_path
+        self.number_of_queries = number_of_queries
 
         if self._correct_embeddings():
             self._load()
         else:
             self.create_embeddings()
+            self.create_query_embeddings()
 
     def _correct_embeddings(self):
         if os.path.isfile(self.path+"info.json"):
@@ -70,6 +73,41 @@ class LaserEmbeddingCreator:
         json.dump(info,open(self.path+"info.json",'w'))
 
         self._load()
+
+    def create_query_embeddings(self):
+        reader = jsonlines.open(self.query_path,'r')
+        writer = jsonlines.open(self.path + "query_embeddings.jsonl","w")
+        laser = Laser(embedding_options={"max_sentences": self.batch_size})
+        query2emb = {}
+
+        queries = []
+        pbar = tqdm(total=int(self.number_of_queries / self.batch_size), desc="embedding queries batches")
+
+        for para in reader:
+            queries.append(para)
+
+            if len(queries) >= self.batch_size:
+                para_text = [p["text"] for p in queries]
+                emb = laser.embed_sentences(para_text, lang=self.language)
+
+                for i, e in enumerate(emb):
+                    query2emb.update({queries[i]["id"]:writer._fp.tell()})
+                    writer.write({queries[i]["id"]: emb.tolist()})
+
+                queries = []
+                pbar.update()
+
+        pbar.close()
+
+        if len(queries) != 0:
+            para_text = [p["text"] for p in queries]
+            emb = laser.embed_sentences(para_text, lang=self.language)
+
+            for i, e in enumerate(emb):
+                query2emb.update({queries[i]["id"]: writer._fp.tell()})
+                writer.write({queries[i]["id"]: emb.tolist()})
+
+        json.dump(query2emb,open(self.path + "query2emb.json",'w'))
 
     def _load(self):
         self.para2emb = json.load(open(self.path + "para2emb.json",'r'))
