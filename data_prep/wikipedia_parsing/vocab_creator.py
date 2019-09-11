@@ -1,62 +1,96 @@
 import jsonlines
 from laserembeddings import Laser
 from tqdm import tqdm
+import json
+import os
 
 class VocabCreator:
-    def __init__(self,save_path,paras_path,queries_path,language,batch_size):
-        self.queries_path = queries_path
-        self.paras_path = paras_path
-        self.save_path = save_path
+    def __init__(self,drive_path,language,method="laser",debug=False):
+
+        self.drive_path = drive_path
+        self.debug = debug
+        self.method = method
+
+        self.base_path = self.drive_path + "raffle_wiki/{}/debug/".format(language) if self.debug else self.drive_path + "raffle_wiki/{}/".format(language)
+        self.save_path = self.base_path + "{}/".format(self.method)
+        os.makedirs(self.save_path, exist_ok=True)
+
+        self.queries_path = self.base_path +"urlqueries.jsonl"
+        self.paras_path = self.base_path +"paragraphs.jsonl"
+
         self.language = language
-        self.batch_size = batch_size
+        self.batch_size = 10 if self.debug else 10
         self.embedder = Laser()
         self.tokenizer = self.embedder._get_tokenizer(self.language)
         self.words = set()
         self.lookup = {}
+        self.info = json.load(open(self.base_path + "wiki_info.json", 'r'))
+
+        ### RUN LOGIC ###
+        self.get_words()
+        self.number_of_words = len(self.words)
+        tqdm.write("vocabulary size: {}".format(self.number_of_words))
+        self.create_vocab()
+        self.update_info()
+
     def create_vocab(self):
 
-        self.get_words()
-        writer = jsonlines.open(self.save_path + "vocab.jsonl", "w")
+        writer = jsonlines.open(self.save_path + "word_emb.jsonl", "w")
 
-        paras = []
+        word_batch = []
         pbar = tqdm(total=int(self.number_of_words / self.batch_size), desc="embedding word batches")
 
         for word in self.words:
-            paras.append(para)
+            word_batch.append(word)
 
-            if len(paras) >= self.batch_size:
-                para_text = [p["text"] for p in paras]
-                emb = laser.embed_sentences(para_text, lang=self.language)
+            if len(word_batch) >= self.batch_size:
+                emb = self.embedder.embed_sentences(word_batch, lang=self.language)
 
                 for i, e in enumerate(emb):
-                    para2emb.update({paras[i]["id"]: writer._fp.tell()})
-                    writer.write({paras[i]["id"]: emb.tolist()})
+                    self.lookup.update({word_batch[i]: writer._fp.tell()})
+                    writer.write({"word":word_batch[i],"emb":e.tolist()})
 
-                paras = []
+                word_batch = []
                 pbar.update()
 
         pbar.close()
 
-        if len(paras) != 0:
-            para_text = [p["text"] for p in paras]
-            emb = laser.embed_sentences(para_text, lang=self.language)
+        if len(word_batch) != 0:
+            emb = self.embedder.embed_sentences(word_batch, lang=self.language)
 
             for i, e in enumerate(emb):
-                para2emb.update({paras[i]["id"]: writer._fp.tell()})
-                writer.write({paras[i]["id"]: emb.tolist()})
+                self.lookup.update({word_batch[i]: writer._fp.tell()})
+                writer.write({"word": word_batch[i], "emb": e.tolist()})
 
-        json.dump(para2emb, open(self.path + "para2emb.json", 'w'))
+        json.dump(self.lookup, open(self.save_path + "word2emb.json", 'w'))
 
 
-def get_words(self):
-        reader = jsonlines.open(self.paras_path,'r')
+    def get_words(self):
         word_lst = []
-        for para in reader.read():
-            para_id = para.keys()[0]
-            text = para.get(para_id)
+
+        total = self.info["paragraphs"] + self.info["urlqueries"]
+        pbar = tqdm(total=total,desc="tokenizing")
+
+        for para in jsonlines.open(self.paras_path,'r'):
+            text = para["text"]
+            tokens = self.tokenizer.tokenize(text)
+            tokens = tokens.split()
+            word_lst.extend(tokens)
+            pbar.update()
+
+        for query in jsonlines.open(self.queries_path, 'r'):
+            text = query["text"]
 
             tokens = self.tokenizer.tokenize(text)
+            tokens = tokens.split()
             word_lst.extend(tokens)
+            pbar.update()
 
-        self.words.union(word_lst)
-        self.number_of_words = len(self.words)
+        pbar.close()
+        self.words = set(word_lst)
+
+    def update_info(self):
+
+        self.info.update({"vocabulary_size":self.number_of_words})
+
+        json.dump(self.info,open(self.base_path+"wiki_info.json",'w'))

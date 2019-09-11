@@ -115,7 +115,7 @@ def extract_paragraphs_and_annotations(page):
     for i in range(2, 6):
         paragraphs = extract_page_paragraphs(p_text, i)
         if paragraphs is not None and paragraphs is not []:
-            annotations = {page["url"]:[para["id"] for para in paragraphs]}
+            annotations = [para["id"] for para in paragraphs]
             return paragraphs,annotations
 
-    return [],{}
+    return [],[]
