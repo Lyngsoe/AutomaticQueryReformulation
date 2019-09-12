@@ -17,18 +17,23 @@ class LSH:
         self.base_path = self.drive_path + "raffle_wiki/{}/debug/".format(language) if self.debug else self.drive_path + "raffle_wiki/{}/".format(language)
         self.emb_path = self.base_path + "laser/"
 
-        self.embeddings = MemFetcher(lookup_path=self.emb_path+"para2emb.json",data_path="paragraph_emb.jsonl")
+        self.embeddings = MemFetcher(lookup_path=self.emb_path+"para2emb.json",data_path=self.emb_path+"paragraph_emb.jsonl")
         self.min_hashes = []
         self.num_perm = 128
         self.lsh = None
         self.threshold = 0.9
         self.paras_to_delete = {}
         self.number_of_paragraphs = 0
-        self.info = json.load()
+        self.info = json.load(open(self.base_path+"wiki_info.json",'r'))
 
         self.create_min_hash()
         self.create_LSH()
         self.find_duplicates()
+        self.delete_in_paragraphs()
+        self.replace_in_embeddings()
+        self.replace_in_url_wiki()
+        self.replace_in_id_wiki()
+        self.create_new_emb_lookup()
 
     def create_min_hash(self):
 
@@ -101,8 +106,8 @@ class LSH:
 
         for emb in self.embedding_methods:
 
-            current = self.base_path + "{}/paragraphs_emb.jsonl".format(emb)
-            temp = self.base_path + "{}/paragraphs_emb_temp.jsonl".format(emb)
+            current = self.base_path + "{}/paragraph_emb.jsonl".format(emb)
+            temp = self.base_path + "{}/paragraph_emb_temp.jsonl".format(emb)
 
             temp_writer = jsonlines.open(temp, 'w')
             for embedding in jsonlines.open(current, 'r'):
@@ -117,7 +122,7 @@ class LSH:
 
     def replace_in_url_wiki(self):
         url2wiki = json.load(open(self.base_path+"url2wiki.json",'r'))
-
+        changes = {}
         for k in url2wiki.keys():
             wiki = url2wiki.get(k)
             paragraphs = wiki["paragraphs"]
@@ -131,14 +136,16 @@ class LSH:
                 paragraphs[k] = v
 
             wiki["paragraphs"] = paragraphs
-            url2wiki.update(wiki)
+            changes.update(wiki)
 
+
+        url2wiki.update(changes)
         json.dump(url2wiki,open(self.base_path+"url2wiki.json",'w'))
 
 
     def replace_in_id_wiki(self):
         id2wiki = json.load(open(self.base_path+"wiki.json",'r'))
-
+        changes = {}
         for k in id2wiki.keys():
             wiki = id2wiki.get(k)
             paragraphs = wiki["paragraphs"]
@@ -152,8 +159,9 @@ class LSH:
                 paragraphs[k] = v
 
             wiki["paragraphs"] = paragraphs
-            id2wiki.update(wiki)
+            changes.update(wiki)
 
+        id2wiki.update(changes)
         json.dump(id2wiki,open(self.base_path+"wiki.json",'w'))
 
 
@@ -163,12 +171,13 @@ class LSH:
 
             lookup = {}
 
-            emb_path = self.base_path + "{}/paragraphs_emb.jsonl".format(emb_meth)
-
-            fp = 0
-            reader = jsonlines.open(emb_path, 'r')
-            for embedding in reader:
+            emb_path = self.base_path + "{}/paragraph_emb.jsonl".format(emb_meth)
+            temp_emb_path = self.base_path + "{}/paragraph_temp_emb.jsonl".format(emb_meth)
+            temp_writer = jsonlines.open(temp_emb_path,'w')
+            for embedding in jsonlines.open(emb_path, 'r'):
+                fp = temp_writer._fp.tell()
                 lookup.update({embedding["id"]:fp})
-                fp = reader._fp.tell()
+                temp_writer.write(embedding)
 
-            json.dump(lookup,open(emb_path,'w'))
+            os.remove(temp_emb_path)
+            json.dump(lookup,open(self.base_path+"para2emb.json",'w'))
