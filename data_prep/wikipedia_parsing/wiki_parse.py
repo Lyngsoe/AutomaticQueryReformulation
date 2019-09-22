@@ -12,7 +12,7 @@ class WikiParser:
         self.language = language
         self.debug = debug
 
-        self.save_path = drive_path+"raffle_wiki/{}/debug/".format(language) if debug else drive_path+"{}/".format(language)
+        self.save_path = drive_path+"raffle_wiki/{}/debug/".format(language) if debug else drive_path+"raffle_wiki/{}/".format(language)
         os.makedirs(self.save_path, exist_ok=True)
 
         self.max_pages = 100 if self.debug else -1
@@ -80,7 +80,11 @@ class WikiParser:
         if a is not []:
             q = parse_queries(page)
             page_info = {page["url"]: {"title": page["title"],"paragraphs":a}}
-            return p, q, page_info
+
+            if len(q) > len(a):
+                return p,q[:len(a)],page_info
+            else:
+                return p, q, page_info
         else:
             return [],[],{}
 

@@ -5,7 +5,8 @@ import hashlib
 MIN_SECTION_LENGTH = 3
 MAX_SECTION_LENGTH = 100
 MIN_SECTIONS = 3
-MIN_PARAGRAPH_LENGTH = 20
+MIN_PARAGRAPH_LENGTH = 500
+MIN_PARAGRAPH_PER_WIKI = 3
 
 def remove_title(page_txt):
     lines = page_txt.split("\n")
@@ -114,7 +115,7 @@ def extract_paragraphs_and_annotations(page):
     p_text = remove_title(page["text"])
     for i in range(2, 6):
         paragraphs = extract_page_paragraphs(p_text, i)
-        if paragraphs is not None and paragraphs is not []:
+        if paragraphs is not None and len(paragraphs) >= MIN_PARAGRAPH_PER_WIKI:
             annotations = [para["id"] for para in paragraphs]
             return paragraphs,annotations
 

@@ -12,7 +12,7 @@ class LSH:
         self.drive_path = drive_path
         self.language = language
         self.debug = debug
-        self.embedding_methods = ["laser"]
+        self.embedding_methods = ["laser","bert"]
 
         self.base_path = self.drive_path + "raffle_wiki/{}/debug/".format(language) if self.debug else self.drive_path + "raffle_wiki/{}/".format(language)
         self.emb_path = self.base_path + "laser/"
@@ -26,7 +26,7 @@ class LSH:
         self.number_of_paragraphs = 0
         self.info = json.load(open(self.base_path+"wiki_info.json",'r'))
 
-        self.create_min_hash()
+        self._create_min_hash()
         self.create_LSH()
         self.find_duplicates()
         self.delete_in_paragraphs()
@@ -35,6 +35,15 @@ class LSH:
         self.replace_in_id_wiki()
         self.create_new_emb_lookup()
 
+
+    def _create_min_hash(self):
+        pbar = tqdm(total=len(self.embeddings.lookup.keys()), desc="min hashing paragraphs")
+        for para_id,fp in self.embeddings.lookup.items():
+
+            minh = self.multi_create_min_hash(self.embeddings(para_id), para_id, self.num_perm)
+            self.min_hashes.append(minh)
+            pbar.update()
+        pbar.close()
     def create_min_hash(self):
 
 

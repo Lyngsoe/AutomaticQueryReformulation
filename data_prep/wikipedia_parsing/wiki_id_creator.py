@@ -12,7 +12,6 @@ class WikiIDCreator:
         self.language = language
         self.debug = debug
         self.wiki = {}
-        self.para2wiki = {}
         self.url2id = {}
         self.wiki_no_id = []
         self.number_of_queries = 0
@@ -23,21 +22,26 @@ class WikiIDCreator:
 
         ### RUN LOGIC ###
         self.create_wiki()
+        json.dump(self.wiki, open(self.base_path + "wiki.json", 'w'))
+        json.dump(self.wiki_no_id,open(self.base_path+"wikiurlnoid.json",'w'))
+        tqdm.write("#wikis: {}".format(len(self.wiki.keys())))
+        tqdm.write("#wikis_no_id: {}".format(len(self.wiki_no_id)))
+        self.info.update({
+            "wikis":len(self.wiki.keys()),
+            "wikis_no_id":len(self.wiki_no_id)})
+        self.wiki = None
+        self.wiki_no_id = None
+
         self.create_queries()
 
         tqdm.write("#queries: {}".format(self.number_of_queries))
-        tqdm.write("#wikis: {}".format(len(self.wiki.keys())))
-        tqdm.write("#wikis_no_id: {}".format(len(self.wiki_no_id)))
+
 
         self.info.update({
-            "wikis":len(self.wiki.keys()),
-            "wikis_no_id":len(self.wiki_no_id),
             "queries":self.number_of_queries
         })
 
         json.dump(self.wiki,open(self.base_path+"wiki.json",'w'))
-        json.dump(self.para2wiki,open(self.base_path+"para2wiki.json",'w'))
-        json.dump(self.wiki_no_id,open(self.base_path+"wikiurlnoid.json",'w'))
         json.dump(self.info,open(self.base_path+"wiki_info.json",'w'))
 
 
@@ -45,8 +49,9 @@ class WikiIDCreator:
     def create_wiki(self):
 
         urlwikis = json.load(open(self.base_path+"url2wiki.json",'r'))
+        wiki_lst = []
         pbar = tqdm(total=self.info["urlwikis"], desc="getting wiki id's")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()*3) as executor:
             future_to_id = {executor.submit(self.get_id,url,info): (url,info) for (url,info) in urlwikis.items()}
             for future in concurrent.futures.as_completed(future_to_id):
                 results = future_to_id[future]
@@ -55,10 +60,8 @@ class WikiIDCreator:
 
                     if wiki_id is not None:
                         info.update({"url": url})
-                        self.wiki.update({wiki_id: info})
-                        self.url2id.update({url: wiki_id})
-                        for p in info["paragraphs"]:
-                            self.para2wiki.update({p: wiki_id})
+                        wiki_lst.append((wiki_id, info,url))
+
                 except Exception as exc:
                     print('%r generated an exception: %s' % (results, exc))
                     raise exc
@@ -66,6 +69,13 @@ class WikiIDCreator:
                 pbar.update()
 
         pbar.close()
+
+        urlwikis = None
+        for wiki_id,info,url in tqdm(wiki_lst,desc="updating wiki dict"):
+            self.wiki.update({wiki_id:info})
+            self.url2id.update({url: wiki_id})
+
+        wiki_lst = None
 
     def get_id(self,url,info):
         wiki_id = self.request_id(url,info["title"])
