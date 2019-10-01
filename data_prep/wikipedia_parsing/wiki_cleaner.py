@@ -28,6 +28,7 @@ def split_paragraphs(text):
     cleaned_paras = []
     for para in paras:
         clean_p = re.sub(REMOVE_NEWLINE,' ',para)
+        clean_p = re.sub("[/$&+,:;=?@#|'<>.\"^*()%!-]", ' ', clean_p)
         cleaned_paras.append(clean_p)
 
     return cleaned_paras

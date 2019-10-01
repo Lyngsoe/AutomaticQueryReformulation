@@ -20,7 +20,7 @@ class MemFetcher:
         self.data = mmap.mmap(mfd,0,access=mmap.PROT_READ)
 
     def __call__(self,lookup_id):
-        fp = self.lookup[lookup_id]
+        fp = self.lookup.get(lookup_id)
         self.data.seek(fp)
         json_data = json.loads(self.data.readline())
 
