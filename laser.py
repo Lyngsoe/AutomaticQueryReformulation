@@ -7,4 +7,7 @@ embeddings = laser.embed_sentences(
      'use multilingual embeddings!'],
     lang='en')  # lang is used for tokenization
 
-print(type(embeddings))
+
+embedder = Laser()
+tokenizer = embedder._get_tokenizer(language)
+tokens = tokenizer.tokenize(text)
