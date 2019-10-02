@@ -1,8 +1,8 @@
-from lucene_class import LUCENE
+from models.base_model import Model
 
-class IdentityModel:
+class IdentityModel(Model):
     def __init__(self):
         self.name = "identity_model"
 
-    def reform(self,query):
+    def reformulate(self,query):
         return query

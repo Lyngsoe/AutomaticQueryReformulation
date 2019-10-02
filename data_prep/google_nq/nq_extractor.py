@@ -2,7 +2,7 @@ import jsonlines
 import os
 from tqdm import tqdm
 import re
-from data_prep.wikipedia_parsing.utils import get_wikidata_id
+from data_prep.wikipedia_parsing.topic_classification.utils import get_wikidata_id
 import json
 
 load_path = "/media/jonas/archive/google_nq/nq/"

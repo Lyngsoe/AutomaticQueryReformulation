@@ -1,7 +1,7 @@
 from data_prep.wikipedia_parsing.wiki_dataloader import WikiDataloader
 from data_prep.wikipedia_parsing.wiki_page_parser import parse_queries,extract_paragraphs_and_annotations
-from data_prep.lsh import remove_duplicates
-from data_prep.wikipedia_parsing.utils import get_wikidata_id
+from legacy.lsh import remove_duplicates
+from data_prep.wikipedia_parsing.topic_classification.utils import get_wikidata_id
 import concurrent.futures
 import multiprocessing
 import jsonlines

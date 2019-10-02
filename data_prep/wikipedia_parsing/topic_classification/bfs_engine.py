@@ -1,5 +1,5 @@
 from mediawiki import MediaWiki
-from data_prep.wikipedia_parsing.utils import get_wikidata_id
+from data_prep.wikipedia_parsing.topic_classification.utils import get_wikidata_id
 
 class BFS:
     def __init__(self,goal_dict,language,max_iter=1000):

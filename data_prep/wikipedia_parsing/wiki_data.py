@@ -1,9 +1,8 @@
-from data_prep.wikipedia_parsing.bfs_engine import BFS
+from data_prep.wikipedia_parsing.topic_classification.bfs_engine import BFS
 import json
-from data_prep.wikipedia_parsing.utils import get_wikidata_id
+from data_prep.wikipedia_parsing.topic_classification.utils import get_wikidata_id
 from tqdm import tqdm
 import html
-import jsonlines
 import concurrent.futures
 import multiprocessing
 import urllib.parse

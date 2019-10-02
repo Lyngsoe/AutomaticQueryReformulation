@@ -1,5 +1,3 @@
-from embedding_method.laser import LaserSentenceEmbeddings
-from embedding_method.laser_moses_python import LaserSentenceEmbeddings
 from datasketch import MinHash,MinHashLSH
 import copy
 from tqdm import tqdm
