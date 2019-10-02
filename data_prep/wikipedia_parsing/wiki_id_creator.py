@@ -22,8 +22,7 @@ class WikiIDCreator:
 
         ### RUN LOGIC ###
         self.create_wiki()
-        json.dump(self.wiki, open(self.base_path + "wiki.json", 'w'))
-        json.dump(self.wiki_no_id,open(self.base_path+"wikiurlnoid.json",'w'))
+
         tqdm.write("#wikis: {}".format(len(self.wiki.keys())))
         tqdm.write("#wikis_no_id: {}".format(len(self.wiki_no_id)))
         self.info.update({
@@ -41,7 +40,7 @@ class WikiIDCreator:
             "queries":self.number_of_queries
         })
 
-        json.dump(self.wiki,open(self.base_path+"wiki.json",'w'))
+
         json.dump(self.info,open(self.base_path+"wiki_info.json",'w'))
 
 
@@ -51,7 +50,7 @@ class WikiIDCreator:
         urlwikis = json.load(open(self.base_path+"url2wiki.json",'r'))
         wiki_lst = []
         pbar = tqdm(total=self.info["urlwikis"], desc="getting wiki id's")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()*3) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
             future_to_id = {executor.submit(self.get_id,url,info): (url,info) for (url,info) in urlwikis.items()}
             for future in concurrent.futures.as_completed(future_to_id):
                 results = future_to_id[future]
@@ -70,12 +69,15 @@ class WikiIDCreator:
 
         pbar.close()
 
-        urlwikis = None
+
         for wiki_id,info,url in tqdm(wiki_lst,desc="updating wiki dict"):
             self.wiki.update({wiki_id:info})
             self.url2id.update({url: wiki_id})
 
+        urlwikis = None
         wiki_lst = None
+        json.dump(self.wiki, open(self.base_path + "wiki.json", 'w'))
+        json.dump(self.wiki_no_id,open(self.base_path+"wikiurlnoid.json",'w'))
 
     def get_id(self,url,info):
         wiki_id = self.request_id(url,info["title"])
@@ -100,7 +102,6 @@ class WikiIDCreator:
 
         pbar.close()
 
-
     def request_id(self,wiki_url,title):
         url = "https://{}.wikipedia.org/w/api.php?action=query&format=json&prop=pageprops&ppprop=wikibase_item&redirects=1&titles={}".format(self.language, title)
         try:
@@ -118,6 +119,7 @@ class WikiIDCreator:
             wikidata_id = pageprops["wikibase_item"]
         except:
             self.wiki_no_id.append({"url":wiki_url,"title":title})
+            print(title)
             return None
 
         return wikidata_id

@@ -12,7 +12,7 @@ raw_wikis = [
 
 #drive_path = "/home/jonas/data/"
 drive_path = "/media/jonas/archive/master/data/"
-debug = False
+debug = True
 
 for wiki_path,language in raw_wikis:
     #extracted_wiki_path = extract_wiki(input_path=wiki_path,language=language)

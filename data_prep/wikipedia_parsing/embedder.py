@@ -6,8 +6,8 @@ from embedding_method.embedders import get_embedder
 
 class Embedder:
     def __init__(self,drive_path,language,debug=False):
-        #self.methods = ["laser","bert"]
-        self.methods = ["bert"]
+        self.methods = ["laser","bert"]
+        #self.methods = ["bert"]
         self.drive_path = drive_path
         self.debug = debug
         self.language = language
