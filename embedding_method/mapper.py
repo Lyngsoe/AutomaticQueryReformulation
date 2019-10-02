@@ -4,11 +4,13 @@ import mmap
 import numpy
 
 class MemFetcher:
-    def __init__(self,lookup_path,data_path):
+    def __init__(self,lookup_path,data_path,key="emb",type="np"):
         self.lookup_path = lookup_path
         self.data_path = data_path
         self.lookup = None
         self.data = None
+        self.key = key
+        self.type = type
 
         self._load()
 
@@ -21,4 +23,8 @@ class MemFetcher:
         fp = self.lookup.get(lookup_id)
         self.data.seek(fp)
         json_data = json.loads(self.data.readline())
-        return numpy.array(json_data["emb"])
+
+        if self.type == "np":
+            return numpy.array(json_data[self.key])
+        elif self.type == "json":
+            return json_data[self.key]
