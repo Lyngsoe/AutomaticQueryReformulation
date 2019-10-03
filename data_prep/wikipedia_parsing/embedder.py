@@ -15,7 +15,7 @@ class Embedder:
         self.base_path = self.drive_path + "raffle_wiki/{}/debug/".format(language) if self.debug else self.drive_path + "raffle_wiki/{}/".format(language)
 
 
-        self.batch_size = 10 if self.debug else 200
+        self.batch_size = 10 if self.debug else 100
 
 
         self.paragraph_path = self.base_path+"paragraphs.jsonl"
@@ -102,3 +102,9 @@ class Embedder:
 
 
         json.dump(query2emb,open(save_path + "query2emb.json",'w'))
+
+if __name__ == '__main__':
+    drive_path = "/media/jonas/archive/master/data/"
+    debug = True
+    language = "da"
+    Embedder(drive_path=drive_path,language=language,debug=debug)

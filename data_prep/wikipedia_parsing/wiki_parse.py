@@ -15,7 +15,7 @@ class WikiParser:
         self.save_path = drive_path+"raffle_wiki/{}/debug/".format(language) if debug else drive_path+"raffle_wiki/{}/".format(language)
         os.makedirs(self.save_path, exist_ok=True)
 
-        self.max_pages = 100 if self.debug else -1
+        self.max_pages = 500 if self.debug else -1
 
         self.number_of_paras = 0
         self.number_of_wikis = 0
@@ -77,7 +77,7 @@ class WikiParser:
 
     def _process_page(self, page):
         p, a = extract_paragraphs_and_annotations(page)
-        if a is not []:
+        if len(a) > 1:
             q = parse_queries(page)
             page_info = {page["url"]: {"title": page["title"],"paragraphs":a}}
 
@@ -109,3 +109,9 @@ class WikiParser:
 
         pbar.close()
 
+
+if __name__ == '__main__':
+    drive_path = "/media/jonas/archive/master/data/"
+    debug = True
+    language = "da"
+    WikiParser(drive_path=drive_path,language=language,debug=debug)

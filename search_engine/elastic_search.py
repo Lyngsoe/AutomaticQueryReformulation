@@ -25,13 +25,14 @@ class ELSearch:
         all_data = []
         with tqdm(total=len(paras),desc="indexing paragraphs") as pbar:
             with concurrent.futures.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
-                future_to_index = {executor.submit(self.es.create,index=self.index(),id = para["para_id"],body={"txt":para["txt"]} ): para for para in paras}
+                future_to_index = {executor.submit(self.es.create,index=self.index,id = para["id"],body={"txt":para["text"]} ): para for para in paras}
                 for future in concurrent.futures.as_completed(future_to_index):
                     respone = future_to_index[future]
                     try:
                         all_data.append(future.result())
                     except Exception as exc:
-                        print('%r generated an exception: %s' % (respone, exc))
+                        print(respone,'generated an exception:',exc)
+                        raise Exception("")
 
                     pbar.update(1)
 
@@ -54,7 +55,7 @@ class ELSearch:
 
     def _search(self,query):
 
-        txt = query["txt"]
+        txt = query["text"]
 
         #txt = re.escape(txt)
         #txt = txt.replace("\\", "")
