@@ -21,6 +21,9 @@ class MemFetcher:
 
     def __call__(self,lookup_id):
         fp = self.lookup.get(lookup_id)
+        if fp is None:
+            print(lookup_id)
+            raise Exception("Id dont exist in lookup")
         self.data.seek(fp)
         json_data = json.loads(self.data.readline())
 

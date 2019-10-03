@@ -94,7 +94,7 @@ class FoldDivider:
 
 if __name__ == '__main__':
     drive_path = "/media/jonas/archive/master/data/"
-    debug = False
+    debug = True
     language = "da"
 
     FoldDivider(drive_path=drive_path,language=language,debug=debug)

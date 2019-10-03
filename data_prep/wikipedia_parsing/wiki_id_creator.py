@@ -123,3 +123,9 @@ class WikiIDCreator:
             return None
 
         return wikidata_id
+
+if __name__ == '__main__':
+    drive_path = "/media/jonas/archive/master/data/"
+    debug = True
+    language = "da"
+    WikiIDCreator(drive_path=drive_path,language=language,debug=debug)
