@@ -5,9 +5,9 @@ import os
 from embedding_method.embedders import get_embedder
 
 class Embedder:
-    def __init__(self,drive_path,language,debug=False):
-        self.methods = ["laser","bert"]
-        #self.methods = ["bert"]
+    def __init__(self,drive_path,language,embedding_methods,debug=False):
+        #self.methods = ["laser","bert"]
+        self.methods = embedding_methods
         self.drive_path = drive_path
         self.debug = debug
         self.language = language
@@ -15,7 +15,7 @@ class Embedder:
         self.base_path = self.drive_path + "raffle_wiki/{}/debug/".format(language) if self.debug else self.drive_path + "raffle_wiki/{}/".format(language)
 
 
-        self.batch_size = 10 if self.debug else 100
+        self.batch_size = 1 if self.debug else 100
 
 
         self.paragraph_path = self.base_path+"paragraphs.jsonl"

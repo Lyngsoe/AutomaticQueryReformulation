@@ -8,11 +8,11 @@ import os
 import json
 
 class LSH:
-    def __init__(self,drive_path,language,debug=False):
+    def __init__(self,drive_path,language,embedding_methods,debug=False):
         self.drive_path = drive_path
         self.language = language
         self.debug = debug
-        self.embedding_methods = ["laser","bert"]
+        self.embedding_methods = embedding_methods
 
         self.base_path = self.drive_path + "raffle_wiki/{}/debug/".format(language) if self.debug else self.drive_path + "raffle_wiki/{}/".format(language)
         self.emb_path = self.base_path + "laser/"

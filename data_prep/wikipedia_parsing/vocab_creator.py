@@ -7,11 +7,11 @@ from embedding_method.embedders import get_embedder
 import re
 
 class VocabCreator:
-    def __init__(self,drive_path,language,debug=False):
+    def __init__(self,drive_path,language,embedding_methods,debug=False):
 
         self.drive_path = drive_path
         self.debug = debug
-        self.methods = ["laser","bert"]
+        self.methods = embedding_methods
 
         self.base_path = self.drive_path + "raffle_wiki/{}/debug/".format(language) if self.debug else self.drive_path + "raffle_wiki/{}/".format(language)
         self.queries_path = self.base_path +"urlqueries.jsonl"
@@ -22,6 +22,7 @@ class VocabCreator:
         self.tokenizer = Laser()._get_tokenizer(self.language)
         self.words = set()
         self.lookup = {}
+        self.word2id = {}
         self.paragraphs = []
         self.info = json.load(open(self.base_path + "wiki_info.json", 'r'))
 
@@ -30,8 +31,14 @@ class VocabCreator:
         self.number_of_words = len(self.words)
         tqdm.write("vocabulary size: {}".format(self.number_of_words))
         self.create_vocab()
+        self.create_word2id()
         self.update_info()
 
+    def create_word2id(self):
+        for i,word in enumerate(self.words):
+            self.word2id.update({word:i})
+
+        json.dump(self.word2id,open(self.base_path+"word2id.json",'w'))
     def create_vocab(self):
 
         for method in self.methods:
