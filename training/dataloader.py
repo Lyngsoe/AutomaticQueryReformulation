@@ -17,7 +17,7 @@ class Dataloader:
         self.tfidf = json.load(open(self.data_base_path+"wiki2tfidf.json"))
         self.word2id = json.load(open(self.data_base_path+"/word2id.json"))
         self.wordmmap = MemFetcher(self.data_base_path+embedding_method+"/word2emb.json",self.data_base_path+embedding_method+"/word_emb.jsonl")
-        self.batch_size = 128
+        self.batch_size = 32
         self.vocab_size = len(self.word2id.keys())
         self.max_length = 20
         self.n=0

@@ -13,7 +13,7 @@ raw_wikis = [
 
 #drive_path = "/home/jonas/data/"
 drive_path = "/media/jonas/archive/master/data/"
-debug = True
+debug = False
 embedding_methods = ["laser"]
 
 for wiki_path,language in raw_wikis:

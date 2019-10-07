@@ -45,6 +45,7 @@ def compress(bpe_tokens):
     for pred in bpe_tokens:
         tokens = " ".join(pred)
         tokens = tokens.replace("@@ ", "")
+        tokens = tokens.replace("@@", "")
         sentences.append(tokens)
     return sentences
 
@@ -77,8 +78,8 @@ max_sentence_length = 20
 
 model = tf.keras.models.Sequential([
     tf.keras.layers.Input((max_sentence_length,LSTM_size)),
-    tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(LSTM_size, return_sequences=True)),
-    tf.keras.layers.Dense(latent_space_size),
+    #tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(LSTM_size, return_sequences=True)),
+    #tf.keras.layers.Dense(latent_space_size),
     tf.keras.layers.LSTM(LSTM_size, return_sequences=True),
     tf.keras.layers.LSTM(LSTM_size, return_sequences=True),
     tf.keras.layers.LSTM(LSTM_size, return_sequences=True),
@@ -116,6 +117,7 @@ for epoch in range(epochs):
         bpe_tokens = get_tokens(seq_pred)
 
         sentences = compress(bpe_tokens)
+        print(sentences[0])
 
 
         #print("out_sentence:",sentences[0])
@@ -130,7 +132,7 @@ for epoch in range(epochs):
         l_loss = language_loss(sentences)
         #print("language loss:",l_loss)
 
-        current_loss = distance_loss + l_loss/100
+        current_loss = distance_loss + l_loss*0
         #print("current loss:",current_loss)
 
         batch_size = len(sentences)
