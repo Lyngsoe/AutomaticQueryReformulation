@@ -31,7 +31,6 @@ class LaserEmbedder:
         self.laser = Laser()
         self.language = language
 
-
     def __call__(self, sentences):
         return self.laser.embed_sentences(sentences,self.language)
 
