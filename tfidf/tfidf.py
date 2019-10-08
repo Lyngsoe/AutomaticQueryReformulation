@@ -10,7 +10,7 @@ class WikiTfIdf:
     def __init__(self,drive_path,language,debug=False):
 
         self.base_path = drive_path + "raffle_wiki/{}/debug/".format(language) if debug else drive_path + "raffle_wiki/{}/".format(language)
-        self.vectorizer = skl.TfidfVectorizer()
+        self.vectorizer = skl.TfidfVectorizer(max_df=0.3)
 
         #if not os.path.isfile(self.base_path+"paralookup.json"):
         MemoryMapLookup(self.base_path+"paragraphs.jsonl",self.base_path+"paralookup.json")

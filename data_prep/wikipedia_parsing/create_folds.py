@@ -2,6 +2,7 @@ import siphash
 import json
 from tqdm import tqdm
 import jsonlines
+import random
 
 class FoldDivider:
     def __init__(self,drive_path,language,debug=False):
@@ -18,7 +19,11 @@ class FoldDivider:
                          '2':[],
                          '3':[],
                          '4':[]}
-
+        self.query_hash = {'0':[],
+                         '1':[],
+                         '2':[],
+                         '3':[],
+                         '4':[]}
         self.query_folds = [0,0,0,0,0]
 
         self.create_hash_table()
@@ -58,16 +63,23 @@ class FoldDivider:
         writers = self.get_writers()
         pbar = tqdm(total=self.info["queries"],desc="saving queries to folds")
 
+        queries = [[],[],[],[],[]]
 
         for query in jsonlines.open(self.base_path+"queries.jsonl",'r'):
             wiki_id = query["wiki_id"]
             fold = int(self.wiki2fold.get(wiki_id))
-
-            writers[fold].write(query)
+            queries[fold].append(query)
+            #writers[fold].write(query)
             self.query_folds[fold] += 1
             pbar.update()
 
         pbar.close()
+
+        for fold in range(4):
+            qs = queries[fold]
+            random.shuffle(qs)
+            for q in qs:
+                writers[fold].write(q)
 
         for i, v in enumerate(self.query_folds):
             tqdm.write("bin: {}, #queries: {}".format(i, v))
@@ -82,7 +94,6 @@ class FoldDivider:
 
         self.hashtable.update({str(hash_key):wikis})
         self.wiki2fold.update({wiki_id:hash_key})
-
 
     def get_writers(self):
         writers = []

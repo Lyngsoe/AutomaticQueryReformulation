@@ -6,19 +6,19 @@ from embedding_method.embedders import get_embedder
 import re
 
 class DataloaderSimple:
-    def __init__(self,data_base_path,embedder,embedding_method,language):
+    def __init__(self,data_base_path,embedder,embedding_method,language,batch_size=1):
         self.language = language
         self.data_base_path = data_base_path
         self.embedding_method = embedding_method
         self.embedder = embedder
         self.mem_map = MemFetcher(self.data_base_path+self.embedding_method+"/query2emb.json",self.data_base_path+self.embedding_method+"/query_emb.jsonl")
         self.max = len(self.mem_map.lookup.keys())
-        self.reader = jsonlines.open(self.data_base_path+"queries.jsonl")
+        self.reader = jsonlines.open(self.data_base_path+"0-queries.jsonl")
         self.tfidf = json.load(open(self.data_base_path+"wiki2tfidf.json"))
         self.bpe2id = json.load(open(self.data_base_path+"bpe2id.json"))
         self.id2bpe = json.load(open(self.data_base_path + "id2bpe.json"))
         self.wordmmap = MemFetcher(self.data_base_path+embedding_method+"/word2emb.json",self.data_base_path+embedding_method+"/word_emb.jsonl")
-        self.batch_size = 16
+        self.batch_size = batch_size
         self.vocab_size = len(self.bpe2id.keys())
         self.max_length = 20
         self.n=0
@@ -44,7 +44,7 @@ class DataloaderSimple:
 
             #Y
             top_10 = self.tfidf.get(query["wiki_id"])
-            bpe_anno = self.get_bpe_annotation([word[0] for word in top_10])
+            bpe_anno = self.get_bpe_annotation([word[0] for word in top_10[:5]])
             y_batch.append(bpe_anno)
 
         return self.on_return(q_batch,y_batch)
@@ -115,11 +115,11 @@ class DataloaderSimple:
         while len(query) < max_len:
             query.append(np.zeros(1024))
 
-        return query[:max_len]
+        return query[:self.max_length]
 
     def bpe_padding(self,bpes,max_len):
         while len(bpes) < max_len:
-            w = np.zeros(self.vocab_size)
+            w = np.ones(self.vocab_size)
             w[0] = 1
             bpes.append(w)
-        return bpes[:max_len]
+        return bpes[:self.max_length]

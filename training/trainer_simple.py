@@ -1,4 +1,3 @@
-from models.auto_encoder import AutoEncoder
 from training.dataloader_simple import DataloaderSimple
 from embedding_method.embedders import get_embedder
 import json
@@ -63,9 +62,9 @@ def get_tokens(model_out):
     return bpe_tokens
 
 
-data_path = "/home/jonas/data/raffle_wiki/da/debug/"
-#data_path = "/media/jonas/archive/master/data/raffle_wiki/da/debug/"
-epochs = 20
+#data_path = "/home/jonas/data/raffle_wiki/da/debug/"
+data_path = "/media/jonas/archive/master/data/raffle_wiki/da/"
+epochs = 5
 embedder = get_embedder(method="laser", language="da")
 id2bpe = json.load(open(data_path + "id2bpe.json", 'r'))
 
@@ -73,9 +72,16 @@ emb_size = 1024
 encoder_layers = 1
 decoder_layers = 1
 LSTM_size = 1024
-latent_space_size = 128
+latent_space_size = 512
 vocab_size = 73637
 mask_value = 0
+batch_size = 16
+
+from tensorflow.compat.v1 import ConfigProto
+from tensorflow.compat.v1 import InteractiveSession
+config = ConfigProto()
+config.gpu_options.allow_growth = True
+session = InteractiveSession(config=config)
 #
 model = tf.keras.models.Sequential(
 [
@@ -83,41 +89,44 @@ model = tf.keras.models.Sequential(
     tf.keras.Input(shape=(None,emb_size)),
     #tf.keras.layers.Embedding(input_dim=emb_size, output_dim=LSTM_size, mask_zero=True),
     tf.keras.layers.Dense(LSTM_size),
-    tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(LSTM_size, return_sequences=True)),
+    tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(LSTM_size,activation='sigmoid', return_sequences=True)),
     tf.keras.layers.Dense(latent_space_size),
-    tf.keras.layers.LSTM(LSTM_size, return_sequences=True),
-    #tf.keras.layers.LSTM(LSTM_size, return_sequences=True),
-    #tf.keras.layers.LSTM(LSTM_size, return_sequences=True),
-    #tf.keras.layers.LSTM(LSTM_size, return_sequences=True),
+    tf.keras.layers.LSTM(LSTM_size,activation='sigmoid', return_sequences=True),
+    #tf.keras.layers.LSTM(LSTM_size,activation='sigmoid', return_sequences=True),
+    #tf.keras.layers.LSTM(LSTM_size,activation='sigmoid', return_sequences=True),
+   # tf.keras.layers.LSTM(LSTM_size,activation='sigmoid', return_sequences=True),
     tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(vocab_size, activation='softmax'))
 ])
 model.compile(loss='categorical_crossentropy',optimizer="adam")
+#model.compile(loss='binary_crossentropy',optimizer="adam")
 
 for epoch in range(epochs):
-
-    eval_data = DataloaderSimple(data_base_path=data_path, embedder=embedder, embedding_method="laser", language="da")
-    for x,y in iter(eval_data):
-        #padded_inputs = tf.keras.preprocessing.sequence.pad_sequences(x,padding='post',value=mask_value)
-
-        #print("padded_input:",padded_inputs.shape)
-        #print(padded_inputs[0][5])
-        print("epoch:",epoch)
-        print("x",x.shape)
-        print("y",y.shape)
-        print("y",len(y[0]))
-        print("y", len(y[0][0]))
-        seq_pred = model.predict_on_batch(x)
-        bpe_tokens = get_tokens(seq_pred)
-        sentences = compress(bpe_tokens)
-        print("out_sentence:",sentences[0])
-        print("out_sentence:", sentences[1])
-        break
+    print("epoch:",epoch)
 
 
-    train_data = DataloaderSimple(data_base_path=data_path, embedder=embedder,embedding_method="laser",language="da")
+    train_data = DataloaderSimple(data_base_path=data_path, embedder=embedder,embedding_method="laser",language="da",batch_size=batch_size)
+    train_iter = 0
     for x,y in iter(train_data):
+
+        train_iter+=1
         #padded_x = tf.keras.preprocessing.sequence.pad_sequences(x, padding='post',value=mask_value)
-        #padded_y = tf.keras.preprocessing.sequence.pad_sequences(y, padding='post',maxlen=padded_x.shape[1],value=mask_value)
+        #padded_y = tf.keras.preprocessing.sequence.pad_sequences(y, padding='post',maxlen=x.shape[1],value=mask_value)
         #print("x",x.shape)
         #print("y",y.shape)
-        model.fit(x,y)
+        batch_loss = model.train_on_batch(x,y)
+        #batch_loss = model.fit(x, y)
+        #print("train_iter:",train_iter,"loss:",batch_loss)
+
+eval_data = DataloaderSimple(data_base_path=data_path, embedder=embedder, embedding_method="laser", language="da",batch_size=1)
+for x, y in iter(eval_data):
+    # padded_inputs = tf.keras.preprocessing.sequence.pad_sequences(x,padding='post',value=mask_value)
+
+    # print("padded_input:",padded_inputs.shape)
+    # print(padded_inputs[0][5])
+
+    #print("x", x.shape)
+    #print("y", y.shape)
+    seq_pred = model.predict_on_batch(x)
+    bpe_tokens = get_tokens(seq_pred)
+    sentences = compress(bpe_tokens)
+    print("out_sentence:", sentences)
