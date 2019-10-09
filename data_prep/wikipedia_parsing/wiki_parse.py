@@ -15,7 +15,7 @@ class WikiParser:
         self.save_path = drive_path+"raffle_wiki/{}/debug/".format(language) if debug else drive_path+"raffle_wiki/{}/".format(language)
         os.makedirs(self.save_path, exist_ok=True)
 
-        self.max_pages = 10000 if self.debug else -1
+        self.max_pages = 5000 if self.debug else -1
 
         self.number_of_paras = 0
         self.number_of_wikis = 0
