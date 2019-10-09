@@ -123,6 +123,6 @@ class DataloaderBPE:
     def bpe_padding(self,bpes,max_len):
         while len(bpes) < max_len:
             w = np.zeros(self.vocab_size)
-            #w[0] = 1
+            w[0] = 1
             bpes.append(w)
         return bpes[:self.max_length]
