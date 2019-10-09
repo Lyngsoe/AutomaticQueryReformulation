@@ -5,19 +5,20 @@ import numpy as np
 from embedding_method.embedders import get_embedder
 import re
 
-class DataloaderSimple:
-    def __init__(self,data_base_path,embedder,embedding_method,language,batch_size=1):
+class DataloaderBPE:
+    def __init__(self,drive_path,language,embedder,embedding_method,batch_size=1,fold=0,debug=False,eval=False):
         self.language = language
-        self.data_base_path = data_base_path
+        self.base_path = drive_path+"raffle_wiki/{}/debug/".format(language) if debug else drive_path+"raffle_wiki/{}/".format(language)
         self.embedding_method = embedding_method
         self.embedder = embedder
-        self.mem_map = MemFetcher(self.data_base_path+self.embedding_method+"/query2emb.json",self.data_base_path+self.embedding_method+"/query_emb.jsonl")
+        self.fold = fold
+        self.mem_map = MemFetcher(self.base_path+self.embedding_method+"/query2emb.json",self.base_path+self.embedding_method+"/query_emb.jsonl")
         self.max = len(self.mem_map.lookup.keys())
-        self.reader = jsonlines.open(self.data_base_path+"0-queries.jsonl")
-        self.tfidf = json.load(open(self.data_base_path+"wiki2tfidf.json"))
-        self.bpe2id = json.load(open(self.data_base_path+"bpe2id.json"))
-        self.id2bpe = json.load(open(self.data_base_path + "id2bpe.json"))
-        self.wordmmap = MemFetcher(self.data_base_path+embedding_method+"/word2emb.json",self.data_base_path+embedding_method+"/word_emb.jsonl")
+        self.reader = jsonlines.open(self.base_path+"{}-queries.jsonl".format(self.fold))
+        self.tfidf = json.load(open(self.base_path+"wiki2tfidf.json"))
+        self.bpe2id = json.load(open(self.base_path+"bpe2id.json"))
+        self.id2bpe = json.load(open(self.base_path + "id2bpe.json"))
+        self.wordmmap = MemFetcher(self.base_path+embedding_method+"/word2emb.json",self.base_path+embedding_method+"/word_emb.jsonl")
         self.batch_size = batch_size
         self.vocab_size = len(self.bpe2id.keys())
         self.max_length = 20

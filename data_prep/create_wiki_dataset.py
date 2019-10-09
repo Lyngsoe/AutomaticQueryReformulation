@@ -11,9 +11,9 @@ raw_wikis = [
     ("/home/jonas/data/wiki/dawiki-20190801-pages-articles.xml","da")
     #("/home/jonas/data/wiki/enwiki-20190801-pages-articles.xml","en")
 ]
-#drive_path = "/home/jonas/data/"
-drive_path = "/media/jonas/archive/master/data/"
-debug = False
+drive_path = "/home/jonas/data/"
+#drive_path = "/media/jonas/archive/master/data/"
+debug = True
 
 embedding_methods = ["laser"]
 
