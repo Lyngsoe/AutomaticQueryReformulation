@@ -3,12 +3,12 @@ import torch
 from torch.autograd import Variable
 
 class EncoderLSTM(nn.Module):
-    def __init__(self, input_size, hidden_size):
+    def __init__(self, input_size, hidden_size,latent_space_size):
         super(EncoderLSTM, self).__init__()
         self.num_layers = 2
         self.hidden_size = hidden_size
         self.lstm = nn.LSTM(input_size, hidden_size,bidirectional=True,batch_first=True)
-        self.latent_space = nn.Linear(hidden_size*2,input_size)
+        self.latent_space = nn.Linear(hidden_size*2,latent_space_size)
 
     def forward(self, input, hidden):
         #print("enc input:",input.size())
