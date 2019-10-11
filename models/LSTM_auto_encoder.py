@@ -15,10 +15,8 @@ teacher_forcing_ratio = 0.5
 learning_rate=0.01
 
 class LSTMAutoEncoder:
-    def __init__(self,drive_path,language,hidden_size = 128,word_emb_size=1024,lantent_space_size=128,vocab_size=73638,device="gpu",debug=False,exp_name=None):
-
-        self.debug = debug
-        self.base_path = drive_path + "raffle_wiki/{}/debug/".format(language) if debug else drive_path + "raffle_wiki/{}/".format(language)
+    def __init__(self,base_path,hidden_size = 128,word_emb_size=1024,lantent_space_size=128,vocab_size=73638,device="gpu",exp_name=None):
+        self.base_path = base_path
         self.save_path = self.base_path + "experiments/"
         self.device = device
         self.id2bpe = json.load(open(self.base_path + "id2bpe.json", 'r'))
