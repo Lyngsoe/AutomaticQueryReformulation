@@ -1,4 +1,4 @@
-from models.LSTM_auto_encoder import LSTMAutoEncoder
+from models.LSTM_auto_encoder_1 import LSTMAutoEncoder
 from search_engine.elastic_search import ELSearch
 import time
 from training.dataloader_bpe import DataloaderBPE

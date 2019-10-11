@@ -15,14 +15,14 @@ teacher_forcing_ratio = 0.5
 learning_rate=0.01
 
 class LSTMAutoEncoder:
-    def __init__(self,drive_path,language,hidden_size = 128,word_emb_size=1024,lantent_space_size=128,vocab_size=73638,device="gpu",debug=False,exp_name=None):
+    def __init__(self,drive_path,language,hidden_size = 1024,word_emb_size=1024,lantent_space_size=1024,vocab_size=73638,device="gpu",debug=False,exp_name=None):
 
         self.debug = debug
         self.base_path = drive_path + "raffle_wiki/{}/debug/".format(language) if debug else drive_path + "raffle_wiki/{}/".format(language)
         self.save_path = self.base_path + "experiments/"
         self.device = device
         self.id2bpe = json.load(open(self.base_path + "id2bpe.json", 'r'))
-        self.model_name="LSTM_auto_encoder"
+        self.model_name="LSTM_auto_encoder_1"
 
         self.exp_name = exp_name if exp_name is not None else self.get_exp_name()
 
@@ -33,7 +33,7 @@ class LSTMAutoEncoder:
         self.decoder = AttnDecoderLSTM(hidden_size, vocab_size, dropout_p=0.1).to(self.device)
         self.encoder_optimizer = optim.SGD(self.encoder.parameters(), lr=learning_rate)
         self.decoder_optimizer = optim.SGD(self.decoder.parameters(), lr=learning_rate)
-        classW = torch.ones(vocab_size)
+        classW = torch.ones(vocab_size,device=self.device)
         classW[0] = 0
         #print("cw:",classW.size())
 
@@ -130,7 +130,7 @@ class LSTMAutoEncoder:
                 #print(y.size())
                 loss += self.criterion(pred, torch.argmax(y[:,di],1).type(torch.long))
 
-        bpe_tokens = self.get_tokens(decoder_pred.numpy())
+        bpe_tokens = self.get_tokens(decoder_pred.cpu().numpy())
         sentences = self.compress(bpe_tokens)
 
         return sentences,loss.item()/target_length
