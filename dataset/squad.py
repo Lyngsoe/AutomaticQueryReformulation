@@ -103,8 +103,8 @@ def create_vocab_for_method(method,save_path,embedder,vocab):
 base_path = "/media/jonas/archive/master/data/squad/"
 os.makedirs(base_path,exist_ok=True)
 
-dataset_path = base_path+"train-v2.0.json"
-qa_writer = jsonlines.open(base_path+"qas.jsonl",'w')
+dataset_path = base_path+"dev-v2.0.json"
+qa_writer = jsonlines.open(base_path+"qas_eval.jsonl",'w')
 info = {}
 
 qas = read_squad(dataset_path)
@@ -125,9 +125,9 @@ for qa in tqdm(qas,desc="Cleaning questions and context and gathering vocab"):
     qa.update({"question":q,"context":c})
     qa_writer.write(qa)
 
-json.dump(info,open(base_path+"info.json",'w'))
+#json.dump(info,open(base_path+"info.json",'w'))
 
-create_vocab(base_path,vocab)
+#create_vocab(base_path,vocab)
 
 print("succes")
 

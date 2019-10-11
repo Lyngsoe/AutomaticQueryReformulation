@@ -9,17 +9,15 @@ from datetime import datetime
 import numpy as np
 SOS_token = 0
 EOS_token = 1
-MAX_LENGTH = 20
 
 teacher_forcing_ratio = 0.5
 learning_rate=0.01
 
 class LSTMAutoEncoder:
-    def __init__(self,drive_path,language,hidden_size = 1024,word_emb_size=1024,lantent_space_size=1024,vocab_size=73638,device="gpu",debug=False,exp_name=None):
-
-        self.debug = debug
-        self.base_path = drive_path + "raffle_wiki/{}/debug/".format(language) if debug else drive_path + "raffle_wiki/{}/".format(language)
+    def __init__(self,base_path,max_length=20,hidden_size = 128,word_emb_size=1024,lantent_space_size=128,vocab_size=73638,device="gpu",exp_name=None):
+        self.base_path = base_path
         self.save_path = self.base_path + "experiments/"
+        self.max_length = max_length
         self.device = device
         self.id2bpe = json.load(open(self.base_path + "id2bpe.json", 'r'))
         self.model_name="LSTM_auto_encoder_1"
@@ -30,7 +28,7 @@ class LSTMAutoEncoder:
         self.vocab_size = vocab_size
         self.latent_space_size = lantent_space_size
         self.encoder = EncoderLSTM(word_emb_size, hidden_size,lantent_space_size).to(self.device)
-        self.decoder = AttnDecoderLSTM(hidden_size, vocab_size, dropout_p=0.1).to(self.device)
+        self.decoder = AttnDecoderLSTM(hidden_size, vocab_size, dropout_p=0.1,max_length=self.max_length).to(self.device)
         self.encoder_optimizer = optim.SGD(self.encoder.parameters(), lr=learning_rate)
         self.decoder_optimizer = optim.SGD(self.decoder.parameters(), lr=learning_rate)
         classW = torch.ones(vocab_size,device=self.device)
@@ -40,7 +38,7 @@ class LSTMAutoEncoder:
         self.criterion = nn.CrossEntropyLoss(weight=classW)
 
 
-    def train(self,input_tensor, target_tensor, max_length=MAX_LENGTH):
+    def train(self,input_tensor, target_tensor):
 
         #print("x_in:",input_tensor.size())
         #print("y_in:", target_tensor.size())
@@ -53,8 +51,8 @@ class LSTMAutoEncoder:
         input_length = input_tensor.size(1)
         target_length = target_tensor.size(1)
 
-        encoder_outputs = torch.zeros(batch_size,max_length, self.encoder.hidden_size*2, device=self.device)
-        lantent_space_outputs = torch.zeros(batch_size, max_length, self.latent_space_size, device=self.device)
+        encoder_outputs = torch.zeros(batch_size,self.max_length, self.encoder.hidden_size*2, device=self.device)
+        lantent_space_outputs = torch.zeros(batch_size, self.max_length, self.latent_space_size, device=self.device)
         #print("enc_out_init:",encoder_outputs.size())
         loss = 0
 
@@ -90,7 +88,7 @@ class LSTMAutoEncoder:
         return loss.item() / target_length
 
 
-    def predict(self,x,y, max_length=MAX_LENGTH):
+    def predict(self,x,y):
         #print("x_in:",x.size())
         with torch.no_grad():
 
@@ -100,8 +98,8 @@ class LSTMAutoEncoder:
             target_length = y.size(1)
 
             encoder_hidden = self.encoder.initHidden(self.device, batch_size=batch_size)
-            encoder_outputs = torch.zeros(batch_size, max_length, self.encoder.hidden_size * 2, device=self.device)
-            lantent_space_outputs = torch.zeros(batch_size, max_length, self.encoder.hidden_size, device=self.device)
+            encoder_outputs = torch.zeros(batch_size, self.max_length, self.encoder.hidden_size * 2, device=self.device)
+            lantent_space_outputs = torch.zeros(batch_size, self.max_length, self.encoder.hidden_size, device=self.device)
             # print("enc_out_init:",encoder_outputs.size())
             loss = 0
 
@@ -112,7 +110,7 @@ class LSTMAutoEncoder:
                 encoder_outputs[:, ei] = encoder_output[:, 0]
                 lantent_space_outputs[:, ei] = latent_out[:, 0]
 
-            decoder_pred = torch.zeros(batch_size, max_length, self.vocab_size, device=self.device)
+            decoder_pred = torch.zeros(batch_size, self.max_length, self.vocab_size, device=self.device)
             decoder_input = torch.mean(lantent_space_outputs, 1).unsqueeze(1)
             decoder_hidden = (encoder_hidden[0][0].unsqueeze(0), encoder_hidden[1][0].unsqueeze(0))
 

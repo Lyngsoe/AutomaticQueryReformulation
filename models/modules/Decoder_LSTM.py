@@ -2,10 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-MAX_LENGTH = 20
-
 class AttnDecoderLSTM(nn.Module):
-    def __init__(self, hidden_size, vocab_size, dropout_p=0.1, max_length=MAX_LENGTH):
+    def __init__(self, hidden_size, vocab_size, dropout_p=0.1, max_length=20):
         super(AttnDecoderLSTM, self).__init__()
         self.hidden_size = hidden_size
         self.vocab_size = vocab_size
