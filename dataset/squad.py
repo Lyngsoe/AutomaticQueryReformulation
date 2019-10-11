@@ -22,8 +22,6 @@ def read_squad(path):
                     answer= qa["answers"][0]["text"]
                     context_answer = context+" * "+answer
                     qas_to_write.append({"question":q.lower(),"context":context_answer.lower(),"id":q_id,"title":title})
-        if len(qas_to_write) > 10:
-            break
     return qas_to_write
 
 
@@ -101,7 +99,10 @@ def create_vocab_for_method(method,save_path,embedder,vocab):
 
     json.dump(lookup, open(save_path + "word2emb.json", 'w'))
 
-base_path = "/home/jonas/data/squad/"
+#base_path = "/home/jonas/data/squad/"
+base_path = "/media/jonas/archive/master/data/squad/"
+os.makedirs(base_path,exist_ok=True)
+
 dataset_path = base_path+"train-v2.0.json"
 qa_writer = jsonlines.open(base_path+"qas.jsonl",'w')
 info = {}
