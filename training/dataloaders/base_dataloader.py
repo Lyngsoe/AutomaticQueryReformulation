@@ -36,7 +36,7 @@ class BaseDataloader:
             #Y
             out,target = self.output_loader.get_embedding(query)
             output_batch.append(out)
-            targets.append(targets)
+            targets.append(target)
 
         return self.on_return(input_batch,output_batch,sources,targets)
 

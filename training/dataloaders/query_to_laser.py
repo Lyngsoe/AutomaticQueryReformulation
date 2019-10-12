@@ -32,7 +32,7 @@ class QueryToLaser:
 
     def clean(self,text):
         text = re.sub("[/$&+,:;=?@#|'<>.\"^*()%!-]", ' ', text)
-        text = text.lower()
+        #text = text.lower()
         return text
 
     def padding(self,query,max_len):
