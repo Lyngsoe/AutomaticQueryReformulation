@@ -2,59 +2,104 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from models.modules.transformer import TransformerModel
+import numpy as np
+import json
+from datetime import datetime
 
-class TransformerModel(nn.Module):
+class Transformer:
 
-    def __init__(self, ntoken, ninp, nhead, nhid, nlayers, dropout=0.5):
-        super(TransformerModel, self).__init__()
+    def __init__(self, base_path,vocab_size, ninp, nhead, nhid, nlayers,device, dropout=0.5,exp_name=None):
+        self.base_path = base_path
+        self.save_path = self.base_path + "experiments/"
+        self.device = device
+        self.id2bpe = json.load(open(self.base_path + "id2bpe.json", 'r'))
+        self.model_name = "Transformer1"
 
-        self.model_type = 'Transformer'
-        self.src_mask = None
-        self.pos_encoder = PositionalEncoding(ninp, dropout)
-        encoder_layers = nn.TransformerEncoderLayer(ninp, nhead, nhid, dropout)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layers, nlayers)
-        self.encoder = nn.Embedding(ntoken, ninp)
-        self.ninp = ninp
-        self.decoder = nn.Linear(ninp, ntoken)
+        self.exp_name = exp_name if exp_name is not None else self.get_exp_name()
 
-        self.init_weights()
+        self.model = TransformerModel(vocab_size,ninp,nhead,nhid,nlayers,device,dropout)
+        self.vocab_size = vocab_size
+        self.criterion = nn.CrossEntropyLoss()
+        self.lr = 5.0  # learning rate
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, 1.0, gamma=0.95)
 
-    def _generate_square_subsequent_mask(self, sz):
-        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
-        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-        return mask
+    def train(self,x,y):
+        #print("x:",x.size())
+        #print("y:",y.size())
+        self.model.train()  # Turn on the train mode
 
-    def init_weights(self):
-        initrange = 0.1
-        self.encoder.weight.data.uniform_(-initrange, initrange)
-        self.decoder.bias.data.zero_()
-        self.decoder.weight.data.uniform_(-initrange, initrange)
+        self.optimizer.zero_grad()
+        output = self.model(x)
+        targets = torch.argmax(y,2).type(torch.long)
+        #print("targets:",targets.size())
+        #print("targets resize:",targets.view(-1).size())
+        #print("output:",output.size())
+        #print("output resize:",output.view(-1,self.vocab_size).size())
+        loss = self.criterion(output.view(-1,self.vocab_size), targets.view(-1))
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.5)
+        self.optimizer.step()
 
-    def forward(self, src):
-        if self.src_mask is None or self.src_mask.size(0) != len(src):
-            device = src.device
-            mask = self._generate_square_subsequent_mask(len(src)).to(device)
-            self.src_mask = mask
+        return loss.item()
 
-        src = self.encoder(src) * math.sqrt(self.ninp)
-        src = self.pos_encoder(src)
-        output = self.transformer_encoder(src, self.src_mask)
-        output = self.decoder(output)
-        return F.log_softmax(output, dim=-1)
+    def predict(self,x,y):
+        self.model.eval()  # Turn on the evaluation mode
+        with torch.no_grad():
+            output = self.model(x)
+            output_flat = output.view(-1, self.vocab_size)
+            targets = torch.argmax(y, 2).type(torch.long)
+            loss = self.criterion(output_flat, targets.view(-1)).item()
 
-class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, dropout=0.1, max_len=5000):
-        super(PositionalEncoding, self).__init__()
-        self.dropout = nn.Dropout(p=dropout)
+            bpe_tokens = self.get_tokens(output.cpu().numpy())
+            sentences = self.compress(bpe_tokens)
 
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0).transpose(0, 1)
-        self.register_buffer('pe', pe)
+        return loss.item(),sentences
 
-    def forward(self, x):
-        x = x + self.pe[:x.size(0), :]
-        return self.dropout(x)
+    def compress(self,bpe_tokens):
+        sentences = []
+        for pred in bpe_tokens:
+            tokens = " ".join(pred)
+            tokens = tokens.replace("@@ ", "")
+            tokens = tokens.replace("@@", "")
+            sentences.append(tokens)
+        return sentences
+
+    def get_tokens(self,model_out):
+        indices = np.argmax(model_out,2)
+        # print("index", indices.shape, type(indices))
+        bpe_tokens = []
+        for sample in list(indices):
+            sent_bpe = []
+            for ind in sample:
+                token = self.id2bpe.get(str(ind))
+                sent_bpe.append(token)
+            bpe_tokens.append(sent_bpe)
+
+        return bpe_tokens
+
+    def get_exp_name(self):
+        now = datetime.now()
+        return self.model_name+"__"+now.strftime("%m-%d_%H:%M")
+
+    def save(self,epoch):
+        save_path = self.save_path+self.exp_name
+
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.model.state_dict()
+            }, save_path+"/model.pt")
+
+
+    def load(self,save_path,train):
+
+        checkpoint = torch.load(save_path+"model.pt")
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+        self.model.load_state_dict(checkpoint["optimizer_state_dict"])
+
+        if train:
+            self.model.train()
+        else:
+            self.model.eval()
