@@ -14,6 +14,7 @@ class SquadDataloader2:
         self.reader = jsonlines.open(base_path + file_name)
         self.batch_size = batch_size
         self.max_length = max_length
+        self.eval = eval
 
     def __next__(self):
         input_batch = []
@@ -70,6 +71,9 @@ class SquadDataloader2:
         y_batch = np.stack(new_y_batch)
         q_batch = np.stack(new_q_batch)
 
+        if self.eval:
+            return q_batch, y_batch,queries,targets
+
         return q_batch,y_batch
 
     def pad_x(self,x,max_len):
@@ -85,5 +89,5 @@ class SquadDataloader2:
         return y[:self.max_length]
 
 
-def __iter__(self):
-    return iter(self.dataloader)
+    def __iter__(self):
+        return self

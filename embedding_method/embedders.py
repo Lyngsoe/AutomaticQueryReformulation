@@ -31,7 +31,7 @@ class BertEmbedderSub:
         import mxnet as mx
         self.language = language
         ctx = mx.gpu(0)
-        self.bert_embedder = BertEmbedding(ctx=ctx,model="bert_12_768_12", dataset_name="wiki_multilingual_cased")
+        self.bert_embedder = BertEmbedding(model="bert_12_768_12", dataset_name="wiki_multilingual_cased")
 
     def __call__(self, sentences):
         results = self.bert_embedder(sentences)
@@ -62,3 +62,6 @@ def get_embedder(method,language):
         return BertEmbedderSub(language)
     else:
         raise Exception("Embedding method {} not supported".format(method))
+
+if __name__ == '__main__':
+    bert = get_embedder("bertsub","en")

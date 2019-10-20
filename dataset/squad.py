@@ -102,8 +102,8 @@ def create_vocab_for_method(method,save_path,embedder,vocab):
 
     json.dump(lookup, open(save_path + "word2emb.json", 'w'))
 
-#base_path = "/home/jonas/data/squad/"
-base_path = "/media/jonas/archive/master/data/squad/"
+base_path = "/home/jonas/data/squad/"
+#base_path = "/media/jonas/archive/master/data/squad/"
 os.makedirs(base_path,exist_ok=True)
 
 
@@ -127,7 +127,8 @@ for qa in tqdm(qas,desc="Cleaning questions and context for train"):
     qa.update({"question":q,"context":c,"context_tokens":c_tokens,"context_emb":[x.tolist() for x in c_emb],"context_token_ids":[int(x) for x in c_token_ids],
                "question_tokens":q_tokens,"question_emb":[x.tolist() for x in q_emb],"question_token_ids":[int(x) for x in q_token_ids]})
     clean_qas.append(qa)
-
+    if len(clean_qas) > 100:
+        break
 
 
 random.shuffle(clean_qas)
@@ -155,8 +156,8 @@ for qa in tqdm(qas_eval,desc="Cleaning questions and context in eval"):
                "question_tokens": q_tokens, "question_emb": [x.tolist() for x in q_emb],
                "question_token_ids": [int(x) for x in q_token_ids]})
     clean_qas.append(qa)
-
-
+    if len(clean_qas) > 100:
+        break
 for qa in tqdm(clean_qas,desc="writing qas eval"):
     qa_writer_eval.write(qa)
 
