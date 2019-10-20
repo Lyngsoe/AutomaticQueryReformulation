@@ -6,7 +6,7 @@ class BertEmbedder:
         import mxnet as mx
         self.language = language
         ctx = mx.gpu(0)
-        self.bert_embedder = BertEmbedding(ctx=ctx, model="bert_12_768_12", dataset_name="wiki_multilingual_cased")
+        self.bert_embedder = BertEmbedding(ctx=ctx,model="bert_12_768_12", dataset_name="wiki_multilingual_cased")
 
     def __call__(self, sentences):
         results = self.bert_embedder(sentences)
@@ -25,6 +25,24 @@ class BertEmbedder:
 
         return mean
 
+class BertEmbedderSub:
+    def __init__(self,language):
+        from bert_embedding import BertEmbedding
+        import mxnet as mx
+        self.language = language
+        ctx = mx.gpu(0)
+        self.bert_embedder = BertEmbedding(model="bert_12_768_12", dataset_name="wiki_multilingual_cased")
+
+    def __call__(self, sentences):
+        results = self.bert_embedder(sentences)
+        #print(results[0][0])
+        #print(results[0][2])
+        #print(len(results[0][0]))
+        #print(len(results[0][1]))
+        #print(len(results[0][2]))
+
+        return results
+
 class LaserEmbedder:
     def __init__(self,language):
         from laserembeddings import Laser
@@ -40,5 +58,7 @@ def get_embedder(method,language):
         return LaserEmbedder(language)
     elif method == "bert":
         return BertEmbedder(language)
+    elif method == "bertsub":
+        return BertEmbedderSub(language)
     else:
         raise Exception("Embedding method {} not supported".format(method))
