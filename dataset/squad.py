@@ -2,9 +2,12 @@ import json
 import jsonlines
 import spacy
 from tqdm import tqdm
-from laserembeddings import Laser
-from embedding_method.embedders import get_embedder
 import os
+import random
+from embedding_method.embedders import get_embedder
+import numpy as np
+
+bert = get_embedder("bertsub", "en")
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -99,35 +102,67 @@ def create_vocab_for_method(method,save_path,embedder,vocab):
 
     json.dump(lookup, open(save_path + "word2emb.json", 'w'))
 
-#base_path = "/home/jonas/data/squad/"
-base_path = "/media/jonas/archive/master/data/squad/"
+base_path = "/home/jonas/data/squad/"
+#base_path = "/media/jonas/archive/master/data/squad/"
 os.makedirs(base_path,exist_ok=True)
 
-dataset_path = base_path+"dev-v2.0.json"
-qa_writer = jsonlines.open(base_path+"qas_eval.jsonl",'w')
+
+dataset_path = base_path+"train-v2.0.json"
+qa_writer = jsonlines.open(base_path+"qas.jsonl",'w')
 info = {}
 
 qas = read_squad(dataset_path)
 info.update({"qas":len(qas)})
 
-vocab = set()
-tokenizer = Laser()._get_tokenizer("en")
-
 clean_qas = []
-for qa in tqdm(qas,desc="Cleaning questions and context and gathering vocab"):
+i = 0
+for qa in tqdm(qas,desc="Cleaning questions and context for train"):
     context = remove_stop_words(qa["context"])
     c,q = replace_entities_in_qa(context,qa["question"])
 
-    tokens = tokenizer.tokenize(c+" "+q)
-    tokens = tokens.split()
-    vocab.update(set(tokens))
+    tokens,emb,token_ids = bert([q])[0]
+    q_tokens,q_emb,q_token_ids = bert([q])[0]
+    c_tokens, c_emb, c_token_ids = bert([c])[0]
 
-    qa.update({"question":q,"context":c})
+    qa.update({"question":q,"context":c,"context_tokens":c_tokens,"context_emb":[x.tolist() for x in c_emb],"context_token_ids":[int(x) for x in c_token_ids],
+               "question_tokens":q_tokens,"question_emb":[x.tolist() for x in q_emb],"question_token_ids":[int(x) for x in q_token_ids]})
+    clean_qas.append(qa)
+    if len(clean_qas) > 10:
+        break
+
+
+random.shuffle(clean_qas)
+
+for qa in tqdm(clean_qas,desc="writing qas"):
     qa_writer.write(qa)
 
-#json.dump(info,open(base_path+"info.json",'w'))
+dataset_path_eval = base_path+"dev-v2.0.json"
+qa_writer_eval = jsonlines.open(base_path+"qas_eval.jsonl",'w')
+qas_eval = read_squad(dataset_path_eval)
 
-#create_vocab(base_path,vocab)
+info.update({"qas":len(qas_eval)})
+
+clean_qas = []
+i = 0
+for qa in tqdm(qas_eval,desc="Cleaning questions and context in eval"):
+    context = remove_stop_words(qa["context"])
+    c,q = replace_entities_in_qa(context,qa["question"])
+
+    q_tokens,q_emb,q_token_ids = bert([q])[0]
+    c_tokens, c_emb, c_token_ids = bert([c])[0]
+
+    qa.update({"question": q, "context": c, "context_tokens": c_tokens, "context_emb": [x.tolist() for x in c_emb],
+               "context_token_ids": [int(x) for x in c_token_ids],
+               "question_tokens": q_tokens, "question_emb": [x.tolist() for x in q_emb],
+               "question_token_ids": [int(x) for x in q_token_ids]})
+    clean_qas.append(qa)
+    if len(clean_qas) > 10:
+        break
+
+for qa in tqdm(clean_qas,desc="writing qas eval"):
+    qa_writer_eval.write(qa)
+
+json.dump(info,open(base_path+"info.json",'w'))
 
 print("succes")
 
