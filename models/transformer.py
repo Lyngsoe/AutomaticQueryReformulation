@@ -20,7 +20,9 @@ class Transformer:
 
         self.model = TransformerModel(vocab_size,ninp,nhead,nhid,nlayers,device,dropout)
         self.vocab_size = vocab_size
-        self.criterion = nn.CrossEntropyLoss()
+        classW = torch.ones(vocab_size, device=self.device)
+        classW[0] = 0
+        self.criterion = nn.CrossEntropyLoss(weight=classW)
         self.lr = 5.0  # learning rate
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr)
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, 1.0, gamma=0.95)
@@ -55,7 +57,7 @@ class Transformer:
             bpe_tokens = self.get_tokens(output.cpu().numpy())
             sentences = self.compress(bpe_tokens)
 
-        return loss.item(),sentences
+        return loss,sentences
 
     def compress(self,bpe_tokens):
         sentences = []
