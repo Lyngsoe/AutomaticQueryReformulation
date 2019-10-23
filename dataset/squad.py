@@ -102,8 +102,8 @@ def create_vocab_for_method(method,save_path,embedder,vocab):
 
     json.dump(lookup, open(save_path + "word2emb.json", 'w'))
 
-#base_path = "/home/jonas/data/squad/"
-base_path = "/media/jonas/archive/master/data/squad/"
+base_path = "/home/jonas/data/squad/"
+#base_path = "/media/jonas/archive/master/data/squad/"
 os.makedirs(base_path,exist_ok=True)
 
 
@@ -150,6 +150,7 @@ for qa in tqdm(qas_eval,desc="Cleaning questions and context in eval"):
 
 
     qa_writer_eval.write(new_qa)
+
 
 
 json.dump(info,open(base_path+"info.json",'w'))

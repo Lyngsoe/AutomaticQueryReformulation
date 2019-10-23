@@ -21,9 +21,9 @@ class Transformer:
         self.model = TransformerModel(vocab_size,ninp,nhead,nhid,nlayers,device,dropout)
         self.vocab_size = vocab_size
         classW = torch.ones(vocab_size, device=self.device)
-        classW[0] = 0
+        classW[1] = 0
         self.criterion = nn.CrossEntropyLoss(weight=classW)
-        self.lr = 5.0  # learning rate
+        self.lr = 1.0  # learning rate
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr)
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, 1.0, gamma=0.95)
 
@@ -34,7 +34,7 @@ class Transformer:
 
         self.optimizer.zero_grad()
         output = self.model(x)
-        targets = torch.argmax(y,2).type(torch.long)
+        targets = y.type(torch.long)
         #print("targets:",targets.size())
         #print("targets resize:",targets.view(-1).size())
         #print("output:",output.size())
@@ -51,35 +51,11 @@ class Transformer:
         with torch.no_grad():
             output = self.model(x)
             output_flat = output.view(-1, self.vocab_size)
-            targets = torch.argmax(y, 2).type(torch.long)
+            targets = y.type(torch.long)
             loss = self.criterion(output_flat, targets.view(-1)).item()
 
-            bpe_tokens = self.get_tokens(output.cpu().numpy())
-            sentences = self.compress(bpe_tokens)
 
-        return loss,sentences
-
-    def compress(self,bpe_tokens):
-        sentences = []
-        for pred in bpe_tokens:
-            tokens = " ".join(pred)
-            tokens = tokens.replace("@@ ", "")
-            tokens = tokens.replace("@@", "")
-            sentences.append(tokens)
-        return sentences
-
-    def get_tokens(self,model_out):
-        indices = np.argmax(model_out,2)
-        # print("index", indices.shape, type(indices))
-        bpe_tokens = []
-        for sample in list(indices):
-            sent_bpe = []
-            for ind in sample:
-                token = self.id2bpe.get(str(ind))
-                sent_bpe.append(token)
-            bpe_tokens.append(sent_bpe)
-
-        return bpe_tokens
+        return loss,output_flat.numpy()
 
     def get_exp_name(self):
         now = datetime.now()
