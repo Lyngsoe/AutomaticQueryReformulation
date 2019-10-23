@@ -108,13 +108,12 @@ os.makedirs(base_path,exist_ok=True)
 
 
 dataset_path = base_path+"train-v2.0.json"
-qa_writer = jsonlines.open(base_path+"qas.jsonl",'w')
+qa_writer = jsonlines.open(base_path+"qas.jsonl",'w',flush=True)
 info = {}
 
 qas = read_squad(dataset_path)
 info.update({"qas":len(qas)})
 
-clean_qas = []
 i = 0
 for qa in tqdm(qas,desc="Cleaning questions and context for train"):
     context = remove_stop_words(qa["context"])
@@ -124,24 +123,18 @@ for qa in tqdm(qas,desc="Cleaning questions and context for train"):
     q_tokens,q_emb,q_token_ids = bert([q])[0]
     c_tokens, c_emb, c_token_ids = bert([c])[0]
 
-    qa.update({"question":q,"context":c,"context_tokens":c_tokens,"context_emb":[x.tolist() for x in c_emb],"context_token_ids":[int(x) for x in c_token_ids],
-               "question_tokens":q_tokens,"question_emb":[x.tolist() for x in q_emb],"question_token_ids":[int(x) for x in q_token_ids]})
-    clean_qas.append(qa)
+    new_qa = {"question":q,"context":c,"context_tokens":c_tokens,"context_emb":[x.tolist() for x in c_emb],"context_token_ids":[int(x) for x in c_token_ids],
+               "question_tokens":q_tokens,"question_emb":[x.tolist() for x in q_emb],"question_token_ids":[int(x) for x in q_token_ids],"id":qa["id"],"title":qa["title"]}
 
+    qa_writer.write(new_qa)
 
-
-random.shuffle(clean_qas)
-
-for qa in tqdm(clean_qas,desc="writing qas"):
-    qa_writer.write(qa)
 
 dataset_path_eval = base_path+"dev-v2.0.json"
-qa_writer_eval = jsonlines.open(base_path+"qas_eval.jsonl",'w')
+qa_writer_eval = jsonlines.open(base_path+"qas_eval.jsonl",'w',flush=True)
 qas_eval = read_squad(dataset_path_eval)
 
 info.update({"qas":len(qas_eval)})
 
-clean_qas = []
 i = 0
 for qa in tqdm(qas_eval,desc="Cleaning questions and context in eval"):
     context = remove_stop_words(qa["context"])
@@ -150,15 +143,14 @@ for qa in tqdm(qas_eval,desc="Cleaning questions and context in eval"):
     q_tokens,q_emb,q_token_ids = bert([q])[0]
     c_tokens, c_emb, c_token_ids = bert([c])[0]
 
-    qa.update({"question": q, "context": c, "context_tokens": c_tokens, "context_emb": [x.tolist() for x in c_emb],
+    new_qa = {"question": q, "context": c, "context_tokens": c_tokens, "context_emb": [x.tolist() for x in c_emb],
                "context_token_ids": [int(x) for x in c_token_ids],
                "question_tokens": q_tokens, "question_emb": [x.tolist() for x in q_emb],
-               "question_token_ids": [int(x) for x in q_token_ids]})
-    clean_qas.append(qa)
+               "question_token_ids": [int(x) for x in q_token_ids],"id":qa["id"],"title":qa["title"]}
 
 
-for qa in tqdm(clean_qas,desc="writing qas eval"):
-    qa_writer_eval.write(qa)
+    qa_writer_eval.write(new_qa)
+
 
 json.dump(info,open(base_path+"info.json",'w'))
 
