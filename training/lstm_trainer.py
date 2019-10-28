@@ -1,4 +1,4 @@
-from models.transformer import Transformer
+from models.LSTM_auto_encoder_1 import LSTMAutoEncoder
 import time
 from training.dataloaders.squad_dataloader_2 import SquadDataloader2
 from embedding_method.embedders import get_embedder
@@ -15,8 +15,12 @@ def evaluate(model,min_test_loss):
     test_loss = 0
     pbar = tqdm(total=int(5928), desc="evaluating batches for epoch {}".format(epoch))
     for eval_x, eval_y,queries,targets in iter(eval_data):
-        eval_x = torch.tensor(eval_x, device=device).type(torch.float64)
-        eval_y = torch.tensor(eval_y, device=device).type(torch.float64)
+        #eval_x = torch.tensor(eval_x, device=device).type(torch.float64)
+        #eval_y = torch.tensor(eval_y, device=device).type(torch.float64)
+
+        eval_x = torch.tensor(eval_x, device=device).type(torch.float64).view(-1,eval_x.shape[0],emsize)
+        eval_y = torch.tensor(eval_y, device=device).type(torch.float64).view(-1,eval_y.shape[0])
+
         loss,predictions = model.predict(eval_x,eval_y)
 
         test_loss+=loss
@@ -29,7 +33,7 @@ def evaluate(model,min_test_loss):
             tqdm.write("target: {} loss: {}".format(targets,loss))
         #else:
             #break
-        i_eval += 1
+        i_eval+=1
 
     test_loss=test_loss/i_eval
     pbar.close()
@@ -43,8 +47,10 @@ def evaluate(model,min_test_loss):
 
     if min_test_loss is None or test_loss < min_test_loss:
         min_test_loss = test_loss
-        model.save(epoch)
-        tqdm.write("model saved!")
+        model.save_best(epoch)
+
+    model.save_latest(epoch)
+    tqdm.write("model saved!")
 
     tqdm.write("epoch: {} train_loss: {}  test_loss: {}".format(epoch,mbl / train_iter,test_loss))
 
@@ -59,10 +65,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #base_path = "/home/jonas/data/squad/"
 base_path = "/media/jonas/archive/master/data/squad/"
 language = "en"
-embedding_method = "laser"
+#embedding_method = "laser"
 epochs = 200
 batch_size = 32
-oov_embedder = get_embedder(embedding_method,language)
 ntokens = 119547 # the size of vocabulary
 # bert size = 119547
 # laser size = 73638
@@ -71,11 +76,14 @@ nhid = 1024 # the dimension of the feedforward network model in nn.TransformerEn
 nlayers = 6 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
 nhead = 2 # the number of heads in the multiheadattention models
 dropout = 0.2 # the dropout value
-model = Transformer(base_path,ntokens, emsize, nhead, nhid, nlayers,device, dropout)
 max_length=50
+
+model = LSTMAutoEncoder(base_path,max_length=max_length,hidden_size=nhid,word_emb_size=emsize,lantent_space_size=nhid,vocab_size=ntokens,device=device)
+
 tqdm.write(model.exp_name)
 exp_path = model.save_path+model.exp_name
-os.makedirs(exp_path,exist_ok=True)
+os.makedirs(exp_path+"/latest",exist_ok=True)
+os.makedirs(exp_path+"/best",exist_ok=True)
 result_writer = jsonlines.open(exp_path+"/resutls.jsonl",'w')
 min_test_loss = None
 max_batch = 100

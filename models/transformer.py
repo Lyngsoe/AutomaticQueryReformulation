@@ -13,7 +13,6 @@ class Transformer:
         self.base_path = base_path
         self.save_path = self.base_path + "experiments/"
         self.device = device
-        self.id2bpe = json.load(open(self.base_path + "id2bpe.json", 'r'))
         self.model_name = "Transformer1"
 
         self.exp_name = exp_name if exp_name is not None else self.get_exp_name()
@@ -23,7 +22,7 @@ class Transformer:
         classW = torch.ones(vocab_size, device=self.device)
         classW[1] = 0
         self.criterion = nn.CrossEntropyLoss(weight=classW)
-        self.lr = 1.0  # learning rate
+        self.lr = 0.5  # learning rate
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr)
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, 1.0, gamma=0.95)
 
@@ -55,7 +54,7 @@ class Transformer:
             loss = self.criterion(output_flat, targets.view(-1)).item()
 
 
-        return loss,output_flat.numpy()
+        return loss,output_flat.cpu().numpy()
 
     def get_exp_name(self):
         now = datetime.now()

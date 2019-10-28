@@ -18,10 +18,11 @@ def compress(bpe_tokens):
 
 def get_tokens(model_out):
     indices = np.argmax(model_out,1)
-    print(indices)
-    # print("index", indices.shape, type(indices))
+    #print(indices)
+    #print("index", indices.shape, type(indices))
     bpe_tokens = []
     for ind in list(indices):
+        #print(len(ind),type(ind))
         token = bert.vocab.idx_to_token[ind]
         bpe_tokens.append(token)
 

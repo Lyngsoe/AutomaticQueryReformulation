@@ -133,7 +133,7 @@ dataset_path_eval = base_path+"dev-v2.0.json"
 qa_writer_eval = jsonlines.open(base_path+"qas_eval.jsonl",'w',flush=True)
 qas_eval = read_squad(dataset_path_eval)
 
-info.update({"qas":len(qas_eval)})
+info.update({"qas_eval":len(qas_eval)})
 
 i = 0
 for qa in tqdm(qas_eval,desc="Cleaning questions and context in eval"):
