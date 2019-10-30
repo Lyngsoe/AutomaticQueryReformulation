@@ -1,4 +1,5 @@
 from models.transformer import Transformer
+from models.transformer_model2 import MyTransformer
 import time
 from training.dataloaders.squad_dataloader_2 import SquadDataloader2
 from embedding_method.embedders import get_embedder
@@ -53,25 +54,28 @@ def evaluate(model,min_test_loss):
 
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#device = "cpu"
+#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = "cpu"
 
-#base_path = "/home/jonas/data/squad/"
-base_path = "/media/jonas/archive/master/data/squad/"
+base_path = "/home/jonas/data/squad/"
+#base_path = "/media/jonas/archive/master/data/squad/"
 language = "en"
 embedding_method = "laser"
 epochs = 200
-batch_size = 32
+batch_size = 1
 oov_embedder = get_embedder(embedding_method,language)
-ntokens = 119547 # the size of vocabulary
+ntokens = 100 # the size of vocabulary
 # bert size = 119547
 # laser size = 73638
 emsize = 768 # embedding dimension
-nhid = 1024 # the dimension of the feedforward network model in nn.TransformerEncoder
+nhid = 128 # the dimension of the feedforward network model in nn.TransformerEncoder
 nlayers = 6 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
 nhead = 2 # the number of heads in the multiheadattention models
 dropout = 0.2 # the dropout value
-model = Transformer(base_path,ntokens, emsize, nhead, nhid, nlayers,device, dropout)
+#model = Transformer(base_path,ntokens, emsize, nhead, nhid, nlayers,device, dropout)
+#model = MyTransformer(base_path,output_size=ntokens, d_model=nhid, nhead=nhead, encoder_layers=nlayers,decoder_layers=nlayers,device=device)
+model = MyTransformer(base_path,input_size=emsize,output_size=ntokens,device=device)
+
 max_length=50
 tqdm.write(model.exp_name)
 exp_path = model.save_path+model.exp_name
