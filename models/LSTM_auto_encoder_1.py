@@ -10,7 +10,7 @@ import numpy as np
 SOS_token = 0
 EOS_token = 1
 
-learning_rate=0.01
+learning_rate=0.1
 
 class LSTMAutoEncoder:
     def __init__(self,base_path,max_length,hidden_size,word_emb_size,lantent_space_size,vocab_size,device="gpu",exp_name=None):
@@ -165,9 +165,13 @@ class LSTMAutoEncoder:
         self.decoder.load_state_dict(checkpoint["model_state_dict"])
         self.decoder_optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
+        epoch = checkpoint["epoch"]
+
         if train:
             self.encoder.train()
             self.decoder.train()
         else:
             self.encoder.eval()
             self.decoder.eval()
+
+        return epoch

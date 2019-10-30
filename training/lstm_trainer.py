@@ -77,19 +77,20 @@ nlayers = 6 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
 nhead = 2 # the number of heads in the multiheadattention models
 dropout = 0.2 # the dropout value
 max_length=50
-
-model = LSTMAutoEncoder(base_path,max_length=max_length,hidden_size=nhid,word_emb_size=emsize,lantent_space_size=nhid,vocab_size=ntokens,device=device)
+exp_name = "LSTM_auto_encoder_1__10-28_11:23"
+model = LSTMAutoEncoder(base_path,max_length=max_length,hidden_size=nhid,word_emb_size=emsize,lantent_space_size=nhid,vocab_size=ntokens,device=device,exp_name=exp_name)
 
 tqdm.write(model.exp_name)
 exp_path = model.save_path+model.exp_name
+epoch = model.load(exp_path+"/latest/",train=True)
 os.makedirs(exp_path+"/latest",exist_ok=True)
 os.makedirs(exp_path+"/best",exist_ok=True)
-result_writer = jsonlines.open(exp_path+"/resutls.jsonl",'w')
+result_writer = jsonlines.open(exp_path+"/resutls.jsonl",'a')
 min_test_loss = None
 max_batch = 100
 tqdm.write("starting training")
 
-for epoch in range(epochs):
+while epoch < epochs:
     pbar = tqdm(total=int(86821/batch_size),desc="training batches for epoch {}".format(epoch))
     train_data = SquadDataloader2(base_path=base_path,batch_size=batch_size,max_length=max_length,eval=False)
     train_iter = 0
@@ -115,6 +116,7 @@ for epoch in range(epochs):
     pbar.close()
 
     min_test_loss = evaluate(model,min_test_loss)
+    epoch+=1
 
 
 
