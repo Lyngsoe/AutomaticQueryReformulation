@@ -113,6 +113,7 @@ while epoch < epochs:
         #print("train time:",train_time)
         #print("ratio:",train_time/data_time)
         #if train_iter % max_batch == 0:
+        break
     pbar.close()
 
     min_test_loss = evaluate(model,min_test_loss)

@@ -10,7 +10,7 @@ import numpy as np
 SOS_token = 0
 EOS_token = 1
 
-learning_rate=0.1
+learning_rate=0.05
 
 class LSTMAutoEncoder:
     def __init__(self,base_path,max_length,hidden_size,word_emb_size,lantent_space_size,vocab_size,device="gpu",exp_name=None):

@@ -16,8 +16,9 @@ def evaluate(model,min_test_loss):
     test_loss = 0
     pbar = tqdm(total=int(5928), desc="evaluating batches for epoch {}".format(epoch))
     for eval_x, eval_y,queries,targets in iter(eval_data):
-        eval_x = torch.tensor(eval_x, device=device).type(torch.float64)
-        eval_y = torch.tensor(eval_y, device=device).type(torch.float64)
+        eval_x = torch.tensor(eval_x, device=device).type(torch.float64).view(-1, eval_x.shape[0], emsize)
+        eval_y = torch.tensor(eval_y, device=device).type(torch.float64).view(-1, eval_y.shape[0])
+
         loss,predictions = model.predict(eval_x,eval_y)
 
         test_loss+=loss
@@ -54,17 +55,17 @@ def evaluate(model,min_test_loss):
 
 
 
-#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = "cpu"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#device = "cpu"
 
-base_path = "/home/jonas/data/squad/"
-#base_path = "/media/jonas/archive/master/data/squad/"
+#base_path = "/home/jonas/data/squad/"
+base_path = "/media/jonas/archive/master/data/squad/"
 language = "en"
 embedding_method = "laser"
 epochs = 200
-batch_size = 1
+batch_size = 32
 oov_embedder = get_embedder(embedding_method,language)
-ntokens = 100 # the size of vocabulary
+ntokens = 119547 # the size of vocabulary
 # bert size = 119547
 # laser size = 73638
 emsize = 768 # embedding dimension
