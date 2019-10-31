@@ -6,7 +6,7 @@ class BertEmbedder:
         import mxnet as mx
         self.language = language
         ctx = mx.gpu(0)
-        self.bert_embedder = BertEmbedding(ctx=ctx,model="bert_12_768_12", dataset_name="wiki_multilingual_cased")
+        self.bert_embedder = BertEmbedding(ctx=ctx,model="bert_12_768_12", dataset_name="book_corpus_wiki_en_uncased")
 
     def __call__(self, sentences):
         results = self.bert_embedder(sentences)
@@ -31,7 +31,7 @@ class BertEmbedderSub:
         import mxnet as mx
         self.language = language
         ctx = mx.gpu(0)
-        self.bert_embedder = BertEmbedding(model="bert_12_768_12", dataset_name="wiki_multilingual_cased")
+        self.bert_embedder = BertEmbedding(model="bert_12_768_12", dataset_name="book_corpus_wiki_en_uncased",max_seq_length=10000)
 
     def __call__(self, sentences):
         results = self.bert_embedder(sentences)

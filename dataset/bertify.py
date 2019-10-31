@@ -1,7 +1,8 @@
 from bert_embedding import BertEmbedding
 import numpy as np
-
-bert = BertEmbedding(model="bert_12_768_12", dataset_name="wiki_multilingual_cased")
+#book_corpus_wiki_en_uncased
+#wiki_multilingual_cased
+bert = BertEmbedding(model="bert_12_768_12", dataset_name="book_corpus_wiki_en_uncased")
 
 def construct_sentence(predictions):
 
