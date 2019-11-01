@@ -164,11 +164,11 @@ for qa in tqdm(qas_eval,desc="Cleaning questions and context in eval"):
 
     if len(new_qas) > 10000:
         random.shuffle(new_qas)
-        write_batch(qa_writer, new_qas)
+        write_batch(qa_writer_eval, new_qas)
         new_qas = []
 
 random.shuffle(new_qas)
-write_batch(qa_writer,new_qas)
+write_batch(qa_writer_eval,new_qas)
 new_qas = []
 
 json.dump(info,open(base_path+"info.json",'w'))
