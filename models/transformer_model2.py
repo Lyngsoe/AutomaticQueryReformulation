@@ -92,8 +92,11 @@ class MyTransformer:
         checkpoint = torch.load(save_path+"model.pt")
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.model.load_state_dict(checkpoint["optimizer_state_dict"])
+        epoch = checkpoint["epoch"]
 
         if train:
             self.model.train()
         else:
             self.model.eval()
+
+        return epoch

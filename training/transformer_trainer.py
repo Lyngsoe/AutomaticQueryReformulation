@@ -10,7 +10,7 @@ from tqdm import tqdm
 from dataset.bertify import construct_sentence
 
 
-def evaluate(model,min_test_loss):
+def evaluate(model,min_test_loss,result_writer):
     eval_data = SquadDataloader2(base_path=base_path,batch_size=1,max_length=max_length,eval=True)
     i_eval = 0
     test_loss = 0
@@ -76,19 +76,23 @@ nhead = 2 # the number of heads in the multiheadattention models
 dropout = 0.2 # the dropout value
 #model = Transformer(base_path,ntokens, emsize, nhead, nhid, nlayers,device, dropout)
 #model = MyTransformer(base_path,output_size=ntokens, d_model=nhid, nhead=nhead, encoder_layers=nlayers,decoder_layers=nlayers,device=device)
-model = MyTransformer(base_path,input_size=emsize,output_size=ntokens,device=device)
+exp_name = "Transformer2__11-02_12:41"
+model = MyTransformer(base_path,input_size=emsize,output_size=ntokens,device=device,exp_name=exp_name)
+#model = MyTransformer(base_path,input_size=emsize,output_size=ntokens,device=device)
 
-max_length=1000
+max_length=300
 tqdm.write(model.exp_name)
 exp_path = model.save_path+model.exp_name
+epoch = model.load(exp_path+"/latest/",train=True)
+#epoch = 0
 os.makedirs(exp_path+"/latest",exist_ok=True)
 os.makedirs(exp_path+"/best",exist_ok=True)
-result_writer = jsonlines.open(exp_path+"/resutls.jsonl",'w')
+result_writer = jsonlines.open(exp_path+"/results.jsonl",'a')
 min_test_loss = None
 max_batch = 100
 tqdm.write("starting training")
 
-for epoch in range(epochs):
+while epoch < epochs:
     pbar = tqdm(total=int(86821/batch_size),desc="training batches for epoch {}".format(epoch))
     train_data = SquadDataloader2(base_path=base_path,batch_size=batch_size,max_length=max_length,eval=False)
     train_iter = 0
@@ -113,7 +117,8 @@ for epoch in range(epochs):
         #if train_iter % max_batch == 0:
     pbar.close()
 
-    min_test_loss = evaluate(model,min_test_loss)
+    min_test_loss = evaluate(model,min_test_loss,result_writer)
+    epoch += 1
 
 
 

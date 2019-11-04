@@ -3,7 +3,7 @@ import jsonlines
 import json
 
 base_path = "/media/jonas/archive/master/data/squad/"
-qa_reader = jsonlines.open(base_path+"qas_unshuffle.jsonl",'r')
+qa_reader = jsonlines.open(base_path+"qas.jsonl",'r')
 info = json.load(open(base_path+"info.json"))
 ctl = []
 qtl = []
