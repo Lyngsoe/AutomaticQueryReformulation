@@ -1,6 +1,6 @@
-from training.dataloaders.base_dataloader import BaseDataloader
-from training.dataloaders.query_to_laser import QueryToLaser
-from training.dataloaders.target_to_laserbpe import TargetToLaserBPE
+from legacy.base_dataloader import BaseDataloader
+from legacy.query_to_laser import QueryToLaser
+from legacy.target_to_laserbpe import TargetToLaserBPE
 from embedding_method.embedders import get_embedder
 
 class SquadDataloader:

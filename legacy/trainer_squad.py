@@ -1,6 +1,5 @@
 from models.LSTM_auto_encoder_1 import LSTMAutoEncoder
-import time
-from training.dataloaders.squad_dataloader import SquadDataloader
+from legacy.squad_dataloader import SquadDataloader
 import torch
 import jsonlines
 import os

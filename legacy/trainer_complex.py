@@ -1,5 +1,4 @@
-from models.auto_encoder import AutoEncoder
-from training.dataloader import Dataloader
+from legacy.dataloader import Dataloader
 from embedding_method.embedders import get_embedder
 import json
 import tensorflow as tf
