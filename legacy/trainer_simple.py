@@ -1,4 +1,4 @@
-from training.dataloader_simple import DataloaderSimple
+from legacy.dataloader_simple import DataloaderSimple
 from embedding_method.embedders import get_embedder
 import json
 import tensorflow as tf

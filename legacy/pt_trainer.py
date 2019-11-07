@@ -1,6 +1,6 @@
 from models.LSTM_auto_encoder_1 import LSTMAutoEncoder
 import time
-from training.dataloader_bpe import DataloaderBPE
+from legacy.dataloader_bpe import DataloaderBPE
 from embedding_method.embedders import get_embedder
 import torch
 import jsonlines

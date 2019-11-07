@@ -1,5 +1,6 @@
-import jsonlines
+import orjson
 import numpy as np
+from json.decoder import JSONDecodeError
 
 class SquadDataloader2:
     def __init__(self,base_path,max_length,eval,batch_size):
@@ -11,7 +12,7 @@ class SquadDataloader2:
         else:
             file_name = "qas.jsonl"
 
-        self.reader = jsonlines.open(base_path + file_name)
+        self.reader = open(base_path + file_name)
         self.batch_size = batch_size
         self.max_length = max_length
         self.eval = eval
@@ -25,12 +26,15 @@ class SquadDataloader2:
 
         for i in range(self.batch_size):
             try:
-                qa = self.reader.read()
-            except EOFError:
+                txt = self.reader.readline()
+                qa = orjson.loads(txt)
+            except (EOFError,JSONDecodeError):
                 if len(input_batch) < 1:
                     raise StopIteration
                 else:
                     return self.on_return(input_batch,output_batch,sources,targets)
+
+
 
             # X
             inp = qa["context_emb"]

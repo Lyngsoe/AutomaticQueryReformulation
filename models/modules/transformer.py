@@ -1,59 +1,56 @@
-import math
+from torch.nn.modules import Module
+from torch.nn.init import xavier_uniform_
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
-class TransformerModel(nn.Module):
 
-    def __init__(self, ntoken, ninp, nhead, nhid, nlayers,device, dropout=0.5):
-        super(TransformerModel, self).__init__()
+class Transformer(Module):
 
-        self.model_type = 'Transformer'
-        self.src_mask = None
-        self.pos_encoder = PositionalEncoding(ninp, dropout).to(device)
-        encoder_layers = nn.TransformerEncoderLayer(ninp, nhead, nhid, dropout)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layers, nlayers).to(device)
-        self.ninp = ninp
-        self.decoder = nn.Linear(ninp, ntoken).to(device)
+    def __init__(self, d_model=512, nhead=8,
+                 custom_encoder=None, custom_decoder=None):
+        super(Transformer, self).__init__()
 
-        self.init_weights()
+        if custom_encoder is not None:
+            self.encoder = custom_encoder
 
-    def _generate_square_subsequent_mask(self, sz):
+        if custom_decoder is not None:
+            self.decoder = custom_decoder
+
+        self._reset_parameters()
+
+        self.d_model = d_model
+        self.nhead = nhead
+
+    def forward(self, src, tgt, src_mask=None, tgt_mask=None,
+                memory_mask=None, src_key_padding_mask=None,
+                tgt_key_padding_mask=None, memory_key_padding_mask=None):
+
+
+        if src.size(1) != tgt.size(1):
+            raise RuntimeError("the batch number of src and tgt must be equal")
+
+        #if src.size(2) != self.d_model or tgt.size(2) != self.d_model:
+        #    raise RuntimeError("the feature number of src and tgt must be equal to d_model")
+
+        memory = self.encoder(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)
+
+        tgt = self.encoder.linear(src)
+
+        output = self.decoder(tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask,
+                              tgt_key_padding_mask=tgt_key_padding_mask,
+                              memory_key_padding_mask=memory_key_padding_mask)
+        return output
+
+    def generate_square_subsequent_mask(self, sz):
+        r"""Generate a square mask for the sequence. The masked positions are filled with float('-inf').
+            Unmasked positions are filled with float(0.0).
+        """
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
         mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
         return mask
 
-    def init_weights(self):
-        initrange = 0.1
-        self.decoder.bias.data.zero_()
-        self.decoder.weight.data.uniform_(-initrange, initrange)
+    def _reset_parameters(self):
+        r"""Initiate parameters in the transformer model."""
 
-    def forward(self, src):
-        if self.src_mask is None or self.src_mask.size(0) != len(src):
-            device = src.device
-            mask = self._generate_square_subsequent_mask(len(src)).to(device)
-            self.src_mask = mask
-
-        src = self.pos_encoder(src)
-        output = self.transformer_encoder(src, self.src_mask)
-        output = self.decoder(output)
-        return F.log_softmax(output, dim=-1)
-
-
-class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, dropout=0.1, max_len=5000):
-        super(PositionalEncoding, self).__init__()
-        self.dropout = nn.Dropout(p=dropout)
-
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0).transpose(0, 1)
-        self.register_buffer('pe', pe)
-
-    def forward(self, x):
-        x = x.type(torch.float)
-        x = x + self.pe[:x.size(0), :]
-        return self.dropout(x)
+        for p in self.parameters():
+            if p.dim() > 1:
+                xavier_uniform_(p)

@@ -1,11 +1,8 @@
 from models.LSTM_auto_encoder_1 import LSTMAutoEncoder
-from search_engine.elastic_search import ELSearch
-import time
-from training.dataloader_bpe import DataloaderBPE
+from legacy.dataloader_bpe import DataloaderBPE
 from embedding_method.embedders import get_embedder
 import torch
-import jsonlines
-import os
+
 #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device = "cpu"
 

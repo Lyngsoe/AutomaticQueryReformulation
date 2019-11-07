@@ -1,5 +1,5 @@
 from models.transformer import Transformer
-from models.transformer_model2 import MyTransformer
+from models.my_transformer import MyTransformer
 import time
 from training.dataloaders.squad_dataloader_2 import SquadDataloader2
 from embedding_method.embedders import get_embedder
@@ -10,7 +10,7 @@ from tqdm import tqdm
 from dataset.bertify import construct_sentence
 
 
-def evaluate(model,min_test_loss,result_writer):
+def evaluate(model,min_test_loss,epoch,result_writer):
     eval_data = SquadDataloader2(base_path=base_path,batch_size=1,max_length=max_length,eval=True)
     i_eval = 0
     test_loss = 0
@@ -117,7 +117,7 @@ while epoch < epochs:
         #if train_iter % max_batch == 0:
     pbar.close()
 
-    min_test_loss = evaluate(model,min_test_loss,result_writer)
+    min_test_loss = evaluate(model,min_test_loss,epoch,result_writer)
     epoch += 1
 
 
