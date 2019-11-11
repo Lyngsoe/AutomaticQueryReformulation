@@ -43,6 +43,19 @@ class BertEmbedderSub:
 
         return results
 
+class BertEmbedderToken:
+    def __init__(self,language):
+        from bert_embedding import BertEmbedding
+        self.language = language
+        bert_embedder = BertEmbedding(model="bert_12_768_12", dataset_name="book_corpus_wiki_en_uncased",max_seq_length=1000)
+
+        self.tokenizer = bert_embedder.tokenizer
+        self.vocab = bert_embedder.vocab
+    def __call__(self, sentences):
+        tokens = self.tokenizer(sentences[0])
+        token_ids = self.vocab.to_indices(tokens)
+        return token_ids
+
 class LaserEmbedder:
     def __init__(self,language):
         from laserembeddings import Laser
@@ -60,6 +73,8 @@ def get_embedder(method,language):
         return BertEmbedder(language)
     elif method == "bertsub":
         return BertEmbedderSub(language)
+    elif method == "berttoken":
+        return BertEmbedderToken(language)
     else:
         raise Exception("Embedding method {} not supported".format(method))
 
