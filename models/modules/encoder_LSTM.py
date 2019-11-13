@@ -9,7 +9,7 @@ class EncoderLSTM(nn.Module):
         self.hidden_size = hidden_size
         self.lstm = nn.LSTM(input_size, hidden_size,bidirectional=True,num_layers=layers)
 
-    def forward(self, input, hidden):
+    def forward(self, input):
         output, hidden = self.lstm(input.float())
         return output, hidden
 

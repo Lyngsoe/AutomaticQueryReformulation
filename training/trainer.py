@@ -39,6 +39,8 @@ class Trainer:
                 tqdm.write("prediction: {}".format(sentences))
                 tqdm.write("target: {} loss: {}".format(targets,loss))
             i_eval+=1
+            if i_eval > 6:
+                break
 
         test_loss=test_loss/i_eval
         pbar.close()
@@ -82,6 +84,11 @@ class Trainer:
                 pbar.set_description("training batches for epoch {} with training loss: {:.2f} train: {:.2f} load: {:.2f}".format(self.epoch, mbl/train_iter ,total_train_time / train_iter, total_data_load_time / train_iter))
                 pbar.update()
                 start_data_load = time.time()
+                if train_iter % 1000 == 0:
+                    #train_loss = mbl / train_iter
+                    #self.evaluate(train_loss)
+                    break
+
             pbar.close()
 
             train_loss = mbl / train_iter

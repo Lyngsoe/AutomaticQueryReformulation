@@ -12,11 +12,11 @@ base_path = "/media/jonas/archive/master/data/squad/"
 
 vocab_size = 30522
 emb_size = 768 # embedding dimension
-d_model = 64 # the dimension of the feedforward network model in nn.TransformerEncoder
+d_model = 128 # the dimension of the feedforward network model in nn.TransformerEncoder
 n_layers = 6 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
 nhead = 8 # the number of heads in the multiheadattention models
 dropout = 0.2 # the dropout value
-dff = 256 # dimension of feed forward
+dff = 1024 # dimension of feed forward
 batch_size = 8
 lr = 0.05
 #exp_name = "Transformer__11-06_11:39"
