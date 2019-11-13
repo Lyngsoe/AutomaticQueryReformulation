@@ -37,7 +37,7 @@ class MyTransformer:
         self.lr = lr  # learning rate
         params = self.model.parameters()
         self.optimizer = torch.optim.SGD(params, lr=self.lr)
-        #self.model.cuda()
+        self.model.cuda()
         self.model.double()
         self.linear_output = nn.Linear(input_size,output_size)
         print("#parameter:", sum([np.prod(p.size()) for p in self.model.parameters()]))
