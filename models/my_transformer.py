@@ -1,15 +1,11 @@
-import math
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.nn.modules.transformer import TransformerEncoderLayer,TransformerDecoderLayer
 from models.modules.transformer_encoder import MyTransformerEncoder
 from models.modules.transformer_decoder import MyTransformerDecoder
 from models.modules.transformer import Transformer
 from torch.nn.modules.normalization import LayerNorm
 import numpy as np
-from models.losses.neg import SGNS
-import json
 from datetime import datetime
 
 class MyTransformer:
@@ -51,8 +47,13 @@ class MyTransformer:
         #x = x.double()
         #y = y.double()
         targets = y.type(torch.long).view(-1)
-        tgt = self.encoder.linear(x)
-        output = self.model(x,tgt)
+        #tgt = self.encoder.linear(y)
+        start_token = torch.zeros(y.size(1),device=self.device).type(torch.float64).unsqueeze(0)
+        tgt = torch.cat((start_token,y),dim=0)
+        tgt_mask = self.model.generate_square_subsequent_mask(y.size(0))
+        tgt_mask=tgt_mask.cuda()
+        tgt_mask=tgt_mask.double()
+        output = self.model(x,tgt,tgt_mask=tgt_mask)
         #print("targets:",targets.size())
         #print("targets resize:",targets.view(-1).size())
         #print("output:",output.size())
@@ -62,7 +63,7 @@ class MyTransformer:
         #print("output resize:",output.view(-1,self.vocab_size).size())
         loss = self.criterion(preds,targets)
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.5)
+        #torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.5)
         self.optimizer.step()
 
         return loss.item()
@@ -70,11 +71,30 @@ class MyTransformer:
     def predict(self,x,y):
         self.model.eval()  # Turn on the evaluation mode
         with torch.no_grad():
-            tgt = self.encoder.linear(x)
-            output = self.model(x,tgt)
+            size = y.size(0)
+            max_len = size
+            tgt = torch.ones_like(y, device=self.device).type(torch.float64)
+            tgt[0] = 2
+            mask = (torch.triu(torch.ones(max_len, max_len)) == 1).transpose(0, 1)
+            mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+            mask = mask.cuda()
+            mask = mask.double()
+            for i in range(1,max_len):
+
+                in_x = x[:i]
+                in_tgt = tgt[:i]
+
+                output = self.model(in_x,in_tgt,tgt_mask=mask[:i,:i])
+                #print(output.size())
+                prediction = torch.argmax(output[-1])
+                tgt[i] = prediction
+                #print(prediction)
+
+
             output_flat = output.view(-1, self.vocab_size)
             targets = y.type(torch.long).view(-1)
-            loss = self.criterion(output_flat, targets).item()
+            loss = self.criterion(output_flat, targets[:max_len-1]).item()
+            #print(tgt.view(-1))
 
 
         return loss,output_flat.cpu().numpy()

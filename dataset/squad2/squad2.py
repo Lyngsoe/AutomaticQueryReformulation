@@ -26,8 +26,7 @@ def read_squad(path):
                     answer= qa["answers"][0]["text"]
                     context_answer = context+" * "+answer
                     qas_to_write.append({"question":q.lower(),"context":context_answer.lower(),"id":q_id,"title":title})
-        if len(qas_to_write) > 1000:
-            break
+
     return qas_to_write
 
 
@@ -72,8 +71,8 @@ def write_batch(writer,qas):
         writer.write(qa)
 
 
-base_path = "/home/jonas/data/squad2/"
-#base_path = "/media/jonas/archive/master/data/squad2/"
+#base_path = "/home/jonas/data/squad2/"
+base_path = "/media/jonas/archive/master/data/squad2/"
 os.makedirs(base_path,exist_ok=True)
 
 

@@ -47,7 +47,9 @@ class BertEmbedderToken:
     def __init__(self,language):
         from bert_embedding import BertEmbedding
         self.language = language
-        bert_embedder = BertEmbedding(model="bert_12_768_12", dataset_name="book_corpus_wiki_en_uncased",max_seq_length=1000)
+        import mxnet as mx
+        ctx = mx.gpu(0)
+        bert_embedder = BertEmbedding(ctx=ctx,model="bert_12_768_12", dataset_name="book_corpus_wiki_en_uncased",max_seq_length=1000)
 
         self.tokenizer = bert_embedder.tokenizer
         self.vocab = bert_embedder.vocab
