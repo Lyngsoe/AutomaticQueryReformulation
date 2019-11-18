@@ -4,9 +4,6 @@ from json.decoder import JSONDecodeError
 
 class SquadDataloader2:
     def __init__(self,base_path,max_length,eval,batch_size):
-
-
-
         if eval:
             file_name = "qas_eval.jsonl"
         else:
@@ -81,7 +78,6 @@ class SquadDataloader2:
         return q_batch,y_batch
 
     def pad_x(self,x,max_len):
-
         while len(x) < max_len:
             w = np.zeros(768)
             x.append(w)

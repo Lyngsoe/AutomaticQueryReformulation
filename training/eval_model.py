@@ -1,10 +1,12 @@
 import torch
 from models.my_transformer import MyTransformer
-from dataset.bertify import construct_sentence
+from dataset.bertify import construct_sentence,get_tokens
 from training.dataloaders.squad_dataloader_2 import SquadDataloader2
 from tqdm import tqdm
+import jsonlines
 
-def evaluate(model,max_seq_len=300):
+def evaluate(model,device,save_path,max_seq_len=300):
+    writer = jsonlines.open(save_path+"predictions.jsonl",'w',flush=True)
     eval_data = SquadDataloader2(base_path=base_path, batch_size=1, max_length=max_seq_len, eval=True)
     i_eval = 0
     test_loss = 0
@@ -17,15 +19,18 @@ def evaluate(model,max_seq_len=300):
 
         test_loss += loss
         pbar.update()
+        sentences = construct_sentence(predictions)
         if i_eval < 6:
-            sentences = construct_sentence(predictions)
             tqdm.write("#### EVAL")
             tqdm.write("query: {}".format(queries))
             tqdm.write("prediction: {}".format(sentences))
             tqdm.write("target: {} loss: {}".format(targets, loss))
         i_eval += 1
-        if i_eval > 6:
-            break
+        to_save = {"query": queries[0],
+                   "targets": targets[0],
+                   "sentence":sentences}
+        writer.write(to_save)
+
 
     test_loss = test_loss / i_eval
     tqdm.write("test_loss = {:.2f}".format(test_loss))
@@ -49,6 +54,6 @@ lr = 0.01
 model = MyTransformer(base_path,input_size=emb_size,output_size=vocab_size,device=device,nhead=nhead,dropout=dropout,d_model=d_model,dff=dff,lr=lr)
 load_path = "/media/jonas/archive/master/data/squad/cluster_exp/experiments/Transformer__11-13_16:49/latest"
 model.load(load_path,train=False)
+save_path = "/media/jonas/archive/master/data/squad/cluster_exp/experiments/Transformer__11-13_16:49/"
 
-
-evaluate(model,device)
+evaluate(model,device,save_path=save_path)
