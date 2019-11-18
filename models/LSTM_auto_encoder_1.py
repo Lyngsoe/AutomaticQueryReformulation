@@ -21,7 +21,7 @@ class LSTMAutoEncoder:
         self.decoder = AttnDecoderLSTM(hidden_size,decoder_layers).to(self.device)
 
         self.linear_decoder_input = Linear(hidden_size*2,hidden_size).to(self.device)
-        self.output = Linear(hidden_size, vocab_size).to(self.device)
+        self.output = Linear(hidden_size, vocab_size).to(self.device).to(self.device)
 
         parameters = list(self.encoder.parameters()) + list(self.decoder.parameters()) + list(self.linear_decoder_input.parameters()) + list(self.output.parameters())
 
@@ -54,7 +54,8 @@ class LSTMAutoEncoder:
         #print("enc_out_init:",encoder_outputs.size())
 
         loss = 0
-
+        #input_tensor = input_tensor.to(self.device)
+        #target_tensor = target_tensor.to(self.device)
         for ei in range(input_length):
             encoder_in = input_tensor[ei]
             encoder_output, encoder_hidden = self.encoder(encoder_in.unsqueeze(0))
@@ -74,8 +75,7 @@ class LSTMAutoEncoder:
         loss.backward()
         self.optimizer.step()
 
-        return loss.item() / target_length
-
+        return loss.item() / batch_size
 
     def predict(self,input_tensor,target_tensor):
         #print("x_in:",x.size())
@@ -115,7 +115,7 @@ class LSTMAutoEncoder:
 
                 loss += self.criterion(pred.squeeze(0), b_target_tensor)
 
-        return loss.item()/target_length, preds.cpu().numpy()
+        return loss.item() / batch_size, preds.cpu().numpy()
 
 
     def get_exp_name(self):

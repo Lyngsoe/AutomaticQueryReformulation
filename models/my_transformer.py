@@ -72,14 +72,14 @@ class MyTransformer:
         self.model.eval()  # Turn on the evaluation mode
         with torch.no_grad():
             size = y.size(0)
-            max_len = 50
+            max_len = size
             tgt = torch.ones_like(y, device=self.device).type(torch.float64)
             tgt[0] = 2
             mask = (torch.triu(torch.ones(max_len, max_len)) == 1).transpose(0, 1)
             mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
             mask = mask.cuda()
             mask = mask.double()
-            for i in range(1,max_len+1):
+            for i in range(1,max_len):
 
                 in_x = x[:i]
                 in_tgt = tgt[:i]
@@ -93,8 +93,8 @@ class MyTransformer:
 
             output_flat = output.view(-1, self.vocab_size)
             targets = y.type(torch.long).view(-1)
-            loss = self.criterion(output_flat, targets[:max_len]).item()
-            print(tgt.view(-1))
+            loss = self.criterion(output_flat, targets[:max_len-1]).item()
+            #print(tgt.view(-1))
 
 
         return loss,output_flat.cpu().numpy()
