@@ -28,3 +28,9 @@ def get_tokens(model_out):
         bpe_tokens.append(token)
 
     return bpe_tokens
+
+def prune(sentence):
+    index = sentence.find("?")
+    if index != -1:
+        sentence = sentence[:index + 1]
+    return sentence
