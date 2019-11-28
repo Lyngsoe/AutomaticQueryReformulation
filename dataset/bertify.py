@@ -11,26 +11,37 @@ def construct_sentence(predictions):
     return sentences
 
 def compress(bpe_tokens):
-    tokens = " ".join(bpe_tokens)
-    tokens = tokens.replace(" ##", "")
-    tokens = tokens.replace("##", "")
-    return tokens
+    sentences = []
+    for sentence_tokens in bpe_tokens:
+        tokens = " ".join(sentence_tokens)
+        tokens = tokens.replace(" ##", "")
+        tokens = tokens.replace("##", "")
+        sentences.append(tokens)
+    return sentences
 
 
 def get_tokens(model_out):
-    indices = np.argmax(model_out,1)
+    #print(model_out.shape)
+    indices = np.argmax(model_out,2)
+    #print(indices.shape)
+    batch_size = indices.shape[1]
     #print(indices)
     #print("index", indices.shape, type(indices))
-    bpe_tokens = []
+    bpe_tokens = [ [] for i in range(batch_size) ]
+    #print(bpe_tokens)
     for ind in list(indices):
-        #print(len(ind),type(ind))
-        token = bert.vocab.idx_to_token[ind]
-        bpe_tokens.append(token)
-
+        for i in range(batch_size):
+            token = bert.vocab.idx_to_token[ind[i]]
+            bpe_tokens[i].append(token)
+        #print(bpe_tokens)
+    #print(bpe_tokens)
     return bpe_tokens
 
-def prune(sentence):
-    index = sentence.find("?")
-    if index != -1:
-        sentence = sentence[:index + 1]
-    return sentence
+def prune(sentences):
+    pruned = []
+    for sentence in sentences:
+        index = sentence.find("?")
+        if index != -1:
+            sentence = sentence[:index + 1]
+        pruned.append(sentence)
+    return pruned

@@ -11,9 +11,4 @@ class LSTM(nn.Module):
 
     def forward(self, input):
         output, hidden = self.lstm(input.float())
-        return output, hidden
-
-    def initHidden(self,device,batch_size):
-        hidden = Variable(next(self.parameters()).data.new(self.num_layers,batch_size,self.hidden_size)).double()
-        cell = Variable(next(self.parameters()).data.new(self.num_layers,batch_size, self.hidden_size)).double()
-        return hidden.type(torch.double), cell.type(torch.double)
+        return output

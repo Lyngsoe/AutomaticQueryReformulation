@@ -10,11 +10,10 @@ def load_all_paras(para_path):
     return paras
 
 
-language = "da"
-es = ELSearch(language)
-es.restart()
+index = "squad"
+es = ELSearch(index)
 
-paras_path = "/media/jonas/archive/master/data/raffle_wiki/da/paragraphs.jsonl"
+paras_path = "/media/jonas/archive/master/data/rl_squad/paragraphs.jsonl"
 
 paras = load_all_paras(paras_path)
 

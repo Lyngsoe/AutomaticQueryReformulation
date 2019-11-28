@@ -25,37 +25,32 @@ class ELSearch:
         all_data = []
         with tqdm(total=len(paras),desc="indexing paragraphs") as pbar:
             with concurrent.futures.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
-                future_to_index = {executor.submit(self.es.create,index=self.index,id = para["id"],body={"txt":para["text"]} ): para for para in paras}
+                future_to_index = {executor.submit(self.es.create,index=self.index,ignore=400,id = para["c_id"],body={"txt":para["paragraph"]} ): para for para in paras}
                 for future in concurrent.futures.as_completed(future_to_index):
                     respone = future_to_index[future]
                     try:
                         all_data.append(future.result())
                     except Exception as exc:
                         print(respone,'generated an exception:',exc)
-                        raise Exception("")
 
                     pbar.update(1)
 
 
     def search(self,queries):
         all_results = []
-        with tqdm(total=len(queries),desc="queries") as pbar:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=self.number_of_cpus) as executor:
-                future_to_query = {executor.submit(self._search,query): query for query in queries}
-                for future in concurrent.futures.as_completed(future_to_query):
-                    results = future_to_query[future]
-                    try:
-                        all_results.append(future.result())
-                    except Exception as exc:
-                        print('%r generated an exception: %s' % (results, exc))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.number_of_cpus) as executor:
+            future_to_query = {executor.submit(self._search,query): query for query in queries}
+            for future in concurrent.futures.as_completed(future_to_query):
+                results = future_to_query[future]
+                try:
+                    all_results.append(future.result())
+                except Exception as exc:
+                    print('%r generated an exception: %s' % (results, exc))
 
-                    pbar.update(1)
 
         return all_results
 
     def _search(self,query):
-
-        txt = query["text"]
 
         #txt = re.escape(txt)
         #txt = txt.replace("\\", "")
@@ -65,7 +60,7 @@ class ELSearch:
         request_body = {
             "query": {
                 "match": {
-                    "txt": txt
+                    "txt": query
                 }
             }
         }

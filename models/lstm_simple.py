@@ -5,6 +5,7 @@ from torch import optim
 import torch.nn as nn
 from datetime import datetime
 import numpy as np
+from torch.autograd import Variable
 
 class LSTMSimple:
     def __init__(self,base_path,reward_function,hidden_size=128,word_emb_size=768,vocab_size=30522,lr=0.1,layers=1,device="cpu",exp_name=None):
@@ -28,31 +29,28 @@ class LSTMSimple:
         print("#parameters:", sum([np.prod(p.size()) for p in parameters]))
 
 
-    def forward(self,input_tensor,target_tensor):
-
+    def predict(self,input_tensor):
         batch_size = input_tensor.size(1)
         input_length = input_tensor.size(0)
-        target_length = target_tensor.size(0)
-
         self.optimizer.zero_grad()
-
-        preds = torch.zeros(input_length, self.vocab_size, device=self.device)
-
-        for i in range(target_length):
-            lstm_in = input_tensor[i]
+        self.preds = torch.zeros(input_length, self.vocab_size, device=self.device)
+        non_grad_preds = torch.zeros(input_length, self.vocab_size, device=self.device)
+        for i in range(input_length):
+            lstm_in = input_tensor[i].unsqueeze(0)
             lstm_out = self.lstm(lstm_in)
             pred = self.output(lstm_out)
-            preds[i] = pred.squeeze(0)
+            self.preds[i] = pred.squeeze(0)
+            non_grad_preds[i] = pred.squeeze(0)
 
-        return preds.cpu().numpy()
-
-    def calc_reward(self,search_results,target):
-        return self.reward_function(search_results,target)
+        return non_grad_preds.detach().cpu().numpy()
 
     def update_policy(self,reward):
         # Update network weights
+        reward = torch.Tensor(self.preds.size(0),1).fill_(reward).to(self.device)
+        loss =(torch.sum( torch.log(self.preds * Variable(reward))))
+
         self.optimizer.zero_grad()
-        reward.backward()
+        loss.backward()
         self.optimizer.step()
 
     def get_exp_name(self):
