@@ -4,6 +4,7 @@ from torch.nn.modules.transformer import TransformerEncoderLayer,TransformerDeco
 from models.modules.transformer_encoder import MyTransformerEncoder
 from models.modules.transformer_decoder import MyTransformerDecoder
 from models.modules.transformer import Transformer
+from torch.nn.modules import Linear
 from torch.nn.modules.normalization import LayerNorm
 import numpy as np
 from datetime import datetime
@@ -18,46 +19,48 @@ class MyTransformer:
 
         self.exp_name = exp_name if exp_name is not None else self.get_exp_name()
 
+        self.linear_in = Linear(input_size,d_model).cuda().double()
         encoder_layer = TransformerEncoderLayer(d_model=d_model,nhead=nhead,dim_feedforward=dff,dropout=dropout)
-        self.encoder = MyTransformerEncoder(encoder_layer, num_layers,in_size=input_size,d_model=d_model,norm=LayerNorm(d_model))
+        self.encoder = MyTransformerEncoder(encoder_layer, num_layers,norm=LayerNorm(d_model))
 
         decoder_layer = TransformerDecoderLayer(d_model=d_model,nhead=nhead,dim_feedforward=dff,dropout=dropout)
-        self.decoder = MyTransformerDecoder(decoder_layer, num_layers,d_model=d_model,output_size=output_size,norm=LayerNorm(d_model))
+        self.decoder = MyTransformerDecoder(decoder_layer, num_layers,norm=LayerNorm(d_model))
 
         self.model = Transformer(d_model=input_size,nhead=nhead,custom_encoder=self.encoder,custom_decoder=self.decoder)
+        self.linear_out = Linear(d_model,output_size).cuda().double()
 
         self.vocab_size = output_size
         classW = torch.ones(output_size, device=self.device).double()
         classW[1] = 0
         self.criterion = nn.CrossEntropyLoss(weight=classW)
         self.lr = lr  # learning rate
-        params = self.model.parameters()
-        self.optimizer = torch.optim.SGD(params, lr=self.lr)
+        params = list(self.linear_in.parameters()) + list(self.model.parameters()) + list(self.linear_out.parameters())
+        self.optimizer = torch.optim.SGD(params, lr=self.lr,weight_decay=0.001)
         self.model.cuda()
         self.model.double()
-        self.linear_output = nn.Linear(input_size,output_size)
+        self.d_mdodel=d_model
         print("#parameter:", sum([np.prod(p.size()) for p in self.model.parameters()]))
 
-    def train(self,x,y):
+    def train(self,x,y,y_tok):
         #print("x:",x.size())
         #print("y:",y.size())
-        self.model.train()  # Turn on the train mode
 
         self.optimizer.zero_grad()
-        #x = x.double()
-        #y = y.double()
-        targets = y.type(torch.long).view(-1)
-        #tgt = self.encoder.linear(y)
-        start_token = torch.zeros(y.size(1),device=self.device).type(torch.float64).unsqueeze(0)
-        tgt = torch.cat((start_token,y),dim=0)
+
+        targets = y_tok.type(torch.long).view(-1)
+
         tgt_mask = self.model.generate_square_subsequent_mask(y.size(0))
         tgt_mask=tgt_mask.cuda()
         tgt_mask=tgt_mask.double()
-        output = self.model(x,tgt,tgt_mask=tgt_mask)
-        #print("targets:",targets.size())
-        #print("targets resize:",targets.view(-1).size())
-        #print("output:",output.size())
-        preds = output.view(-1,self.vocab_size)
+
+        lin_in = self.linear_in(x)
+        tgt = self.linear_in(y)
+
+        output = self.model(lin_in,tgt,tgt_mask=tgt_mask)
+
+        lin_out = self.linear_out(output)
+
+        preds = lin_out.view(-1,self.vocab_size)
         #print("preds",preds.size())
 
         #print("output resize:",output.view(-1,self.vocab_size).size())
@@ -69,35 +72,34 @@ class MyTransformer:
         return loss.item()
 
     def predict(self,x,y):
-        self.model.eval()  # Turn on the evaluation mode
+
         with torch.no_grad():
-            size = y.size(0)
-            max_len = size
-            tgt = torch.ones_like(y, device=self.device).type(torch.float64)
-            tgt[0] = 2
-            mask = (torch.triu(torch.ones(max_len, max_len)) == 1).transpose(0, 1)
-            mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-            mask = mask.cuda()
-            mask = mask.double()
+            max_len = y.size(0)+1
+            mask = (torch.triu(torch.ones(max_len, max_len)) == 1).transpose(0, 1).float()
+            mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
+
+            output = torch.zeros(max_len,x.size(1),self.d_mdodel).cuda().double()
             for i in range(1,max_len):
 
                 in_x = x[:i]
-                in_tgt = tgt[:i]
+                tgt = output[:i]
 
-                output = self.model(in_x,in_tgt,tgt_mask=mask[:i,:i])
-                #print(output.size())
-                prediction = torch.argmax(output[-1])
-                tgt[i] = prediction
-                #print(prediction)
+                #print("x",in_x.size())
+                #print("tgt",tgt.size())
+                lin_in = self.linear_in(in_x)
+                #print("x_l",lin_in.size())
+                m_out = self.model(lin_in,tgt,tgt_mask=mask[:i,:i])
+                #print(m_out.size())
+                output[i-1] = m_out[-1]
 
-
-            output_flat = output.view(-1, self.vocab_size)
+            lin_out = self.linear_out(output)
+            output_flat = lin_out.view(-1, self.vocab_size)
             targets = y.type(torch.long).view(-1)
-            loss = self.criterion(output_flat, targets[:max_len-1]).item()
+            loss = self.criterion(output_flat[1:], targets).item()
             #print(tgt.view(-1))
 
 
-        return loss,output_flat.cpu().numpy()
+        return loss,lin_out.cpu().numpy()
 
     def get_exp_name(self):
         now = datetime.now()
@@ -114,21 +116,41 @@ class MyTransformer:
 
         torch.save({
             'epoch': epoch,
+            'model_state_dict': self.linear_in.state_dict(),
+        }, save_path + "/linear_in.pt")
+
+        torch.save({
+            'epoch': epoch,
             'model_state_dict': self.model.state_dict(),
             'optimizer_state_dict': self.model.state_dict()
             }, save_path+"/model.pt")
+
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': self.linear_out.state_dict(),
+        }, save_path + "/linear_out.pt")
 
 
     def load(self,save_path,train):
 
         checkpoint = torch.load(save_path+"/model.pt")
         self.model.load_state_dict(checkpoint["model_state_dict"])
-        self.model.load_state_dict(checkpoint["optimizer_state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         epoch = checkpoint["epoch"]
+
+        checkpoint = torch.load(save_path + "/linear_in.pt")
+        self.linear_in.load_state_dict(checkpoint["model_state_dict"])
+
+        checkpoint = torch.load(save_path + "/linear_out.pt")
+        self.linear_out.load_state_dict(checkpoint["model_state_dict"])
 
         if train:
             self.model.train()
+            self.linear_in.train()
+            self.linear_out.train()
         else:
             self.model.eval()
+            self.linear_in.eval()
+            self.linear_out.eval()
 
         return epoch

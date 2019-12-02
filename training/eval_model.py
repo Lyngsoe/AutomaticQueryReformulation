@@ -52,8 +52,8 @@ lr = 0.01
 
 
 model = MyTransformer(base_path,input_size=emb_size,output_size=vocab_size,device=device,nhead=nhead,dropout=dropout,d_model=d_model,dff=dff,lr=lr)
-load_path = "/media/jonas/archive/master/data/squad/cluster_exp/experiments/Transformer__11-13_16:49/latest"
+load_path = "/media/jonas/archive/master/data/cluster_exp/28_11_19/experiments/Transformer__11-13_16:49/latest"
 model.load(load_path,train=False)
-save_path = "/media/jonas/archive/master/data/squad/cluster_exp/experiments/Transformer__11-13_16:49/"
+save_path = "/media/jonas/archive/master/data/cluster_exp/28_11_19/experiments/Transformer__11-13_16:49/"
 
 evaluate(model,device,save_path=save_path)

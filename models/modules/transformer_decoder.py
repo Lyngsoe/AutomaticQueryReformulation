@@ -6,12 +6,11 @@ import copy
 
 class MyTransformerDecoder(Module):
 
-    def __init__(self, decoder_layer, num_layers, norm=None,d_model=128,output_size=30522):
+    def __init__(self, decoder_layer, num_layers, norm=None):
         super(MyTransformerDecoder, self).__init__()
         self.layers = _get_clones(decoder_layer, num_layers)
         self.num_layers = num_layers
         self.norm = norm
-        self.linear = Linear(d_model,output_size)
 
     def forward(self, tgt, memory, tgt_mask=None,
                 memory_mask=None, tgt_key_padding_mask=None,
@@ -40,7 +39,7 @@ class MyTransformerDecoder(Module):
         if self.norm:
             output = self.norm(output)
 
-        return self.linear(output)
+        return output
 
 
 def _get_clones(module, N):

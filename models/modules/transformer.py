@@ -33,8 +33,6 @@ class Transformer(Module):
 
         memory = self.encoder(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)
 
-        tgt = self.encoder.linear(src)
-
         output = self.decoder(tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask,
                               tgt_key_padding_mask=tgt_key_padding_mask,
                               memory_key_padding_mask=memory_key_padding_mask)

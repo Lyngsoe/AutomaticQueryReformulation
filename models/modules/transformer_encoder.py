@@ -4,12 +4,11 @@ from torch.nn.modules import Linear
 import copy
 
 class MyTransformerEncoder(Module):
-    def __init__(self, encoder_layer, num_layers, norm=None,in_size=768,d_model=128):
+    def __init__(self, encoder_layer, num_layers, norm=None):
         super(MyTransformerEncoder, self).__init__()
         self.layers = _get_clones(encoder_layer, num_layers)
         self.num_layers = num_layers
         self.norm = norm
-        self.linear = Linear(in_size,d_model)
 
     def forward(self, src, mask=None, src_key_padding_mask=None):
         r"""Pass the input through the endocder layers in turn.
@@ -22,7 +21,7 @@ class MyTransformerEncoder(Module):
         Shape:
             see the docs in Transformer class.
         """
-        output = self.linear(src)
+        output = src
 
         for i in range(self.num_layers):
             output = self.layers[i](output, src_mask=mask,
