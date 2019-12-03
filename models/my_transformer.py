@@ -35,7 +35,7 @@ class MyTransformer:
         self.criterion = nn.CrossEntropyLoss(weight=classW)
         self.lr = lr  # learning rate
         params = list(self.linear_in.parameters()) + list(self.model.parameters()) + list(self.linear_out.parameters())
-        self.optimizer = torch.optim.SGD(params, lr=self.lr,weight_decay=0.001)
+        self.optimizer = torch.optim.Adam(params, lr=self.lr,weight_decay=0.1)
         self.model.cuda()
         self.model.double()
         self.d_mdodel=d_model
@@ -48,7 +48,7 @@ class MyTransformer:
         self.optimizer.zero_grad()
 
         targets = y_tok.type(torch.long).view(-1)
-
+        y = torch.cat((torch.ones(1,y.size(1),y.size(2)).cuda().double(),y))
         tgt_mask = self.model.generate_square_subsequent_mask(y.size(0))
         tgt_mask=tgt_mask.cuda()
         tgt_mask=tgt_mask.double()
@@ -60,7 +60,7 @@ class MyTransformer:
 
         lin_out = self.linear_out(output)
 
-        preds = lin_out.view(-1,self.vocab_size)
+        preds = lin_out[1:].view(-1,self.vocab_size)
         #print("preds",preds.size())
 
         #print("output resize:",output.view(-1,self.vocab_size).size())
@@ -78,7 +78,7 @@ class MyTransformer:
             mask = (torch.triu(torch.ones(max_len, max_len)) == 1).transpose(0, 1).float()
             mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
 
-            output = torch.zeros(max_len,x.size(1),self.d_mdodel).cuda().double()
+            output = torch.ones(max_len,x.size(1),self.d_mdodel).cuda().double()
             for i in range(1,max_len):
 
                 in_x = x[:i]
@@ -92,10 +92,10 @@ class MyTransformer:
                 #print(m_out.size())
                 output[i-1] = m_out[-1]
 
-            lin_out = self.linear_out(output)
+            lin_out = self.linear_out(m_out)
             output_flat = lin_out.view(-1, self.vocab_size)
             targets = y.type(torch.long).view(-1)
-            loss = self.criterion(output_flat[1:], targets).item()
+            loss = self.criterion(output_flat, targets).item()
             #print(tgt.view(-1))
 
 

@@ -40,7 +40,7 @@ class Trainer:
                 tqdm.write("target: {} loss: {}".format(targets,loss))
                 tqdm.write("\n")
             i_eval+=1
-            if i_eval > 10:
+            if i_eval > 100:
                 break
 
         test_loss=test_loss/i_eval
