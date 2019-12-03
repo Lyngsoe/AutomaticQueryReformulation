@@ -11,7 +11,7 @@ from datetime import datetime
 
 class MyTransformer:
 
-    def __init__(self, base_path,input_size=768,d_model=128,dff=2048,num_layers=6,output_size=30522,nhead=12,device="gpu",dropout=0.2,lr=0.05,exp_name=None):
+    def __init__(self, base_path,input_size=768,d_model=128,dff=2048,num_layers=6,output_size=30522,nhead=12,device="gpu",dropout=0.2,lr=0.05,l2=0,exp_name=None):
         self.base_path = base_path
         self.save_path = self.base_path + "experiments/"
         self.device = device
@@ -35,7 +35,7 @@ class MyTransformer:
         self.criterion = nn.CrossEntropyLoss(weight=classW)
         self.lr = lr  # learning rate
         params = list(self.linear_in.parameters()) + list(self.model.parameters()) + list(self.linear_out.parameters())
-        self.optimizer = torch.optim.Adam(params, lr=self.lr,weight_decay=0.1)
+        self.optimizer = torch.optim.Adam(params, lr=self.lr,weight_decay=l2)
         self.model.cuda()
         self.model.double()
         self.d_mdodel=d_model
@@ -46,9 +46,10 @@ class MyTransformer:
         #print("y:",y.size())
 
         self.optimizer.zero_grad()
-
+        self.model.train()
         targets = y_tok.type(torch.long).view(-1)
-        y = torch.cat((torch.ones(1,y.size(1),y.size(2)).cuda().double(),y))
+        #y = torch.cat((torch.mean(x,dim=0).unsqueeze(0).cuda().double(),y))
+        y = torch.cat((torch.zeros(1,x.size(1),x.size(2)).cuda().double(), y))
         tgt_mask = self.model.generate_square_subsequent_mask(y.size(0))
         tgt_mask=tgt_mask.cuda()
         tgt_mask=tgt_mask.double()
@@ -69,28 +70,31 @@ class MyTransformer:
         #torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.5)
         self.optimizer.step()
 
-        return loss.item()
+        return loss.item(),lin_out.detach().cpu().numpy()
 
     def predict(self,x,y):
 
         with torch.no_grad():
+            self.model.eval()
             max_len = y.size(0)+1
             mask = (torch.triu(torch.ones(max_len, max_len)) == 1).transpose(0, 1).float()
             mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
 
-            output = torch.ones(max_len,x.size(1),self.d_mdodel).cuda().double()
+            output = torch.Tensor(max_len,x.size(1),self.d_mdodel).fill_(0).cuda().double()
+            #output[0] = self.linear_in(torch.mean(x,dim=0))
+            lin_in = self.linear_in(x)
             for i in range(1,max_len):
 
-                in_x = x[:i]
+                #in_x = x
                 tgt = output[:i]
 
                 #print("x",in_x.size())
                 #print("tgt",tgt.size())
-                lin_in = self.linear_in(in_x)
+
                 #print("x_l",lin_in.size())
                 m_out = self.model(lin_in,tgt,tgt_mask=mask[:i,:i])
                 #print(m_out.size())
-                output[i-1] = m_out[-1]
+                output[i] = m_out[-1]
 
             lin_out = self.linear_out(m_out)
             output_flat = lin_out.view(-1, self.vocab_size)

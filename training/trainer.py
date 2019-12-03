@@ -29,7 +29,6 @@ class Trainer:
             y_tok = torch.tensor(y_tok, device=self.device).type(torch.float64).view(-1, y_tok.shape[0])
 
             loss,predictions = self.model.predict(eval_x,y_tok)
-            loss /= y_tok.size(0)
             test_loss+=loss
             pbar.update()
             if i_eval < 3:
@@ -81,15 +80,18 @@ class Trainer:
                 total_data_load_time+= time.time() - start_data_load
                 train_iter += 1
                 start_train = time.time()
-                batch_loss = self.model.train(x_tensor, y_tensor,y_tok)
-                batch_loss /= y_tensor.size(0)
+                batch_loss,predictions = self.model.train(x_tensor, y_tensor,y_tok)
                 total_train_time += time.time() - start_train
                 mbl += batch_loss
                 pbar.set_description("training batches for epoch {} with training loss: {:.5f} train: {:.2f} load: {:.2f}".format(self.epoch, mbl/train_iter ,total_train_time / train_iter, total_data_load_time / train_iter))
                 pbar.update()
                 start_data_load = time.time()
-                if train_iter % 100 == 0:
+                if train_iter % 1000 == 0:
                     pbar.close()
+                    sentences = construct_sentence(predictions)
+                    tqdm.write("\nTRAIN:\n")
+                    for s in sentences:
+                        tqdm.write("prediction: {}".format(s))
                     train_loss = mbl / train_iter
                     self.evaluate(train_loss)
                     pbar = tqdm(total=int(86821 / self.batch_size),desc="training batches for epoch {}".format(self.epoch))
