@@ -19,16 +19,17 @@ class Trainer:
         self.exp_path = model.save_path + model.exp_name
         self.make_dir()
 
-    def evaluate(self,train_loss):
+    def evaluate(self,train_loss,train_iter):
         eval_data = SquadDataloader2(base_path=self.base_path,batch_size=1,max_length=self.max_seq_len,eval=True)
         i_eval = 0
         test_loss = 0
         pbar = tqdm(total=5928, desc="evaluating batches for epoch {}".format(self.epoch))
-        for eval_x, eval_y,queries,targets,y_tok in iter(eval_data):
+        for eval_x, eval_y,queries,targets,y_tok,x_mask,y_mask in iter(eval_data):
             eval_x = torch.tensor(eval_x, device=self.device).type(torch.float64).view(-1, eval_x.shape[0], eval_x.shape[2])
             y_tok = torch.tensor(y_tok, device=self.device).type(torch.float64).view(-1, y_tok.shape[0])
-
-            loss,predictions = self.model.predict(eval_x,y_tok)
+            x_mask = torch.tensor(x_mask, device=self.device).type(torch.float64)
+            y_mask = torch.tensor(y_mask, device=self.device).type(torch.float64)
+            loss,predictions = self.model.predict(eval_x,y_tok,x_mask,y_mask)
             test_loss+=loss
             pbar.update()
             if i_eval < 3:
@@ -48,7 +49,8 @@ class Trainer:
         epoch_summary = {
             "epoch":self.epoch,
             "test_loss":test_loss,
-            "train_loss":train_loss
+            "train_loss":train_loss,
+            "train_iter":train_iter
         }
         self.get_result_writer().write(epoch_summary)
 
@@ -65,22 +67,25 @@ class Trainer:
     def train(self):
 
         while self.epoch < self.max_epoch:
-            pbar = tqdm(total=int(86821 / self.batch_size), desc="training batches for epoch {}".format(self.epoch))
+            pbar = tqdm(total=int(720 / self.batch_size), desc="training batches for epoch {}".format(self.epoch))
             train_data = SquadDataloader2(base_path=self.base_path, batch_size=self.batch_size, max_length=self.max_seq_len, eval=False)
             train_iter = 0
             mbl = 0
             total_train_time = 0
             total_data_load_time = 0
             start_data_load = time.time()
-            for x,y,y_tok in iter(train_data):
+            for x,y,y_tok,x_mask,y_mask in iter(train_data):
                 x_tensor = torch.tensor(x, device=self.device).type(torch.double).view(-1, x.shape[0], x.shape[2])
                 y_tensor = torch.tensor(y, device=self.device).type(torch.double).view(-1, y.shape[0], y.shape[2])
                 y_tok = torch.tensor(y_tok, device=self.device).type(torch.float64).view(-1, y_tok.shape[0])
-
+                #print(x_mask.shape)
+                x_mask = torch.tensor(x_mask, device=self.device).type(torch.float64)
+                y_mask = torch.tensor(y_mask, device=self.device).type(torch.float64)
+                #print(x_mask.size())
                 total_data_load_time+= time.time() - start_data_load
                 train_iter += 1
                 start_train = time.time()
-                batch_loss,predictions = self.model.train(x_tensor, y_tensor,y_tok)
+                batch_loss,predictions = self.model.train(x_tensor, y_tensor,y_tok,x_mask,y_mask)
                 total_train_time += time.time() - start_train
                 mbl += batch_loss
                 pbar.set_description("training batches for epoch {} with training loss: {:.5f} train: {:.2f} load: {:.2f}".format(self.epoch, mbl/train_iter ,total_train_time / train_iter, total_data_load_time / train_iter))
@@ -93,15 +98,17 @@ class Trainer:
                     for s in sentences:
                         tqdm.write("prediction: {}".format(s))
                     train_loss = mbl / train_iter
-                    self.evaluate(train_loss)
+                    self.evaluate(train_loss,train_iter)
                     pbar = tqdm(total=int(86821 / self.batch_size),desc="training batches for epoch {}".format(self.epoch))
                     pbar.update(train_iter)
                     #break
 
             pbar.close()
-
-            train_loss = mbl / train_iter
-            self.evaluate(train_loss)
+            if train_iter == 0:
+                train_loss = 0
+            else:
+                train_loss = mbl / train_iter
+            self.evaluate(train_loss,train_iter)
             self.epoch += 1
 
     def get_result_writer(self):

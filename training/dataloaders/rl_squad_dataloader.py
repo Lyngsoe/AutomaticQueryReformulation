@@ -15,9 +15,9 @@ class RLSquadDataloader:
         self.eval = eval
 
     def __next__(self):
-        input_batch = []
-        output_batch = []
-        sources = []
+        q_embedding = []
+        relevant_documents = []
+        q_txt = []
         base_rewards = []
 
         for i in range(self.batch_size):
@@ -25,42 +25,49 @@ class RLSquadDataloader:
                 txt = self.reader.readline()
                 qa = orjson.loads(txt)
             except (EOFError, JSONDecodeError):
-                if len(input_batch) < 1:
+                if len(q_embedding) < 1:
                     raise StopIteration
                 else:
-                    return self.on_return(input_batch, output_batch, sources,base_rewards)
+                    return self.on_return(q_embedding, relevant_documents, q_txt,base_rewards)
 
             # X
-            inp = qa["question_emb"]
-            source = qa["question"]
             base_rewards.append(qa["base_reward"])
-            input_batch.append(inp)
-            sources.append(source)
+            q_embedding.append(qa["question_emb"])
+            q_txt.append(qa["question"])
 
             # Y
-            out = qa["paragraphs"]
-            output_batch.append(out)
+            relevant_documents.append(qa["paragraphs"])
 
-        return self.on_return(input_batch, output_batch, sources,base_rewards)
+        return self.on_return(q_embedding, relevant_documents, q_txt,base_rewards)
 
-    def on_return(self, q_batch, y_batch, queries,base_rewards):
+    def on_return(self, q_embedding, relevant_documents, q_txt,base_rewards):
         max_seq_len = 0
 
-        for q in q_batch:
+        for q in q_embedding:
             seq_len = len(q)
             if seq_len > max_seq_len:
                 max_seq_len = seq_len
 
         new_q_batch = []
-        for q in q_batch:
+        for q in q_embedding:
             new_q_batch.append(self.pad_x(q, max_seq_len))
 
         q_batch = np.stack(new_q_batch)
 
-        if self.eval:
-            return q_batch, y_batch, queries, queries,base_rewards
+        mask_q = []
+        for q in q_batch:
+            seq_len = len(q)
+            mask_q.append(self.create_mask(seq_len, max_seq_len))
 
-        return q_batch, y_batch,base_rewards
+        q_mask = np.stack(mask_q)
+
+
+
+
+        if self.eval:
+            return q_batch, relevant_documents, q_txt,base_rewards,q_mask
+
+        return q_batch, relevant_documents,base_rewards,q_mask
 
     def __iter__(self):
         return self
@@ -70,3 +77,12 @@ class RLSquadDataloader:
             w = np.zeros(768)
             x.append(w)
         return x[:self.max_length]
+
+    def create_mask(self,seq_len,max_seq_len):
+
+        m = [1 for i in range(seq_len)]
+        m2 = [0 for i in range(max_seq_len-seq_len)]
+        m.extend(m2)
+        #print(m)
+        #print(len(m)," ", max_seq_len)
+        return m[:self.max_length]

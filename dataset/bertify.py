@@ -34,7 +34,6 @@ def get_tokens(model_out):
             token = bert.vocab.idx_to_token[ind[i]]
             bpe_tokens[i].append(token)
         #print(bpe_tokens)
-    #print(bpe_tokens)
     return bpe_tokens
 
 def prune(sentences):

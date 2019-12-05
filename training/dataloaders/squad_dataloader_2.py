@@ -63,6 +63,16 @@ class SquadDataloader2:
             if seq_len > max_seq_len_y:
                 max_seq_len_y = seq_len
 
+        mask_q = []
+        for q in q_batch:
+            seq_len = len(q)
+            mask_q.append(self.create_mask(seq_len,max_seq_len_q))
+
+        mask_y = []
+        for y in y_batch:
+            seq_len = len(y)
+            mask_y.append(self.create_mask(seq_len, max_seq_len_y))
+
         new_q_batch = []
         for q in q_batch:
             new_q_batch.append(self.pad_x(q,max_seq_len_q))
@@ -79,6 +89,8 @@ class SquadDataloader2:
         y_batch = np.stack(new_y_batch)
         q_batch = np.stack(new_q_batch)
         y_toks = np.stack(new_y_tok_batch)
+        q_mask = np.stack(mask_q)
+        y_mask = np.stack(mask_y)
 
         #print("y_batch",y_batch.shape)
         #print("y_mask", y_mask.shape)
@@ -86,9 +98,9 @@ class SquadDataloader2:
         #print("q_mask", q_mask.shape)
 
         if self.eval:
-            return q_batch, y_batch,queries,targets,y_toks
+            return q_batch, y_batch,queries,targets,y_toks,q_mask,y_mask
 
-        return q_batch,y_batch,y_toks
+        return q_batch,y_batch,y_toks,q_mask,y_mask
 
     def pad_x(self,x,max_len):
         while len(x) < max_len:
@@ -101,6 +113,15 @@ class SquadDataloader2:
             y.append(1)
         return y[:self.max_length]
 
+
+    def create_mask(self,seq_len,max_seq_len):
+
+        m = [1 for i in range(seq_len)]
+        m2 = [0 for i in range(max_seq_len-seq_len)]
+        m.extend(m2)
+        #print(m)
+        #print(len(m)," ", max_seq_len)
+        return m[:self.max_length]
 
     def __iter__(self):
         return self

@@ -27,7 +27,8 @@ def read_squad(path):
                     q_id = qa["id"]
 
                     qas_to_write.append({"question":q,"c_id":c_id,"q_id":q_id,"title":title,"paragraphs":para_ids})
-
+        if len(qas_to_write) > 10000:
+            break
 
     return qas_to_write,paragraphs
 

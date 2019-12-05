@@ -7,11 +7,12 @@ from models.modules.transformer import Transformer
 from torch.nn.modules.normalization import LayerNorm
 import numpy as np
 from datetime import datetime
+from torch.nn.modules import Linear
 from torch.autograd import Variable
 
 class RLTransformer:
 
-    def __init__(self, base_path,reward_function,input_size=768,d_model=128,dff=2048,num_layers=6,output_size=30522,nhead=12,device="gpu",dropout=0.2,lr=0.05,exp_name=None):
+    def __init__(self, base_path,reward_function,input_size=768,d_model=128,dff=2048,num_layers=6,output_size=30522,nhead=12,device="gpu",dropout=0.2,lr=0.05,l2=0,exp_name=None):
         self.base_path = base_path
         self.save_path = self.base_path + "experiments/"
         self.device = device
@@ -20,92 +21,105 @@ class RLTransformer:
 
         self.exp_name = exp_name if exp_name is not None else self.get_exp_name()
 
+        self.linear_in = Linear(input_size, d_model).cuda().double()
         encoder_layer = TransformerEncoderLayer(d_model=d_model,nhead=nhead,dim_feedforward=dff,dropout=dropout)
-        self.encoder = MyTransformerEncoder(encoder_layer, num_layers,in_size=input_size,d_model=d_model,norm=LayerNorm(d_model))
+        self.encoder = MyTransformerEncoder(encoder_layer, num_layers,norm=LayerNorm(d_model))
 
         decoder_layer = TransformerDecoderLayer(d_model=d_model,nhead=nhead,dim_feedforward=dff,dropout=dropout)
-        self.decoder = MyTransformerDecoder(decoder_layer, num_layers,d_model=d_model,output_size=output_size,norm=LayerNorm(d_model))
+        self.decoder = MyTransformerDecoder(decoder_layer, num_layers,norm=LayerNorm(d_model))
 
         self.model = Transformer(d_model=input_size,nhead=nhead,custom_encoder=self.encoder,custom_decoder=self.decoder)
+        self.linear_out = Linear(d_model, output_size).cuda().double()
 
         self.vocab_size = output_size
-
+        self.d_model = d_model
         self.lr = lr  # learning rate
-        params = self.model.parameters()
-        self.optimizer = torch.optim.SGD(params, lr=self.lr,weight_decay=0.1)
+        params = list(self.linear_in.parameters()) + list(self.model.parameters()) + list(self.linear_out.parameters())
+        self.optimizer = torch.optim.SGD(params, lr=self.lr,weight_decay=l2)
         self.model.cuda()
         self.model.double()
-        self.linear_output = nn.Linear(input_size,output_size)
         print("#parameter:", sum([np.prod(p.size()) for p in self.model.parameters()]))
 
-    def predict(self,x):
+
+    def train_predict(self,x,q_mask):
         #print("x:",x.size())
-        batch_size = x.size(1)
+        self.model.train()
+        self.optimizer.zero_grad()
         max_len = x.size(0)
-        tgt = torch.ones((max_len,batch_size), device=self.device).type(torch.float64)
-        #print("tgt:", tgt.size())
-        tgt[0,:] = 2
-        mask = (torch.triu(torch.ones(max_len, max_len)) == 1).transpose(0, 1)
-        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-        mask = mask.cuda()
-        mask = mask.double()
+
+        m_out = self.linear_in(x[0]).unsqueeze(0)
+        lin_in = self.linear_in(x)
+
+        q_mask = q_mask == 1
+
         for i in range(1,max_len):
 
-            in_x = x[:i]
-            in_tgt = tgt[:i]
-            #print("in_x:", in_x.size())
-            #print("in_tgt:", in_tgt.size())
-            output = self.model(in_x,in_tgt,tgt_mask=mask[:i,:i])
-            #print("output:", output.size())
-            prediction = torch.argmax(output[-1],dim=1)
-            #print("prediction:",prediction.size())
-            tgt[i,:] = prediction
+            mask = (torch.triu(torch.ones(i, i)) == 1).transpose(0, 1).float()
+            mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
 
-        self.preds = output
-        #print("output:", output.size())
-        preds_no_grad = output
+            out = self.model(lin_in,m_out[:i],tgt_mask=mask,src_key_padding_mask=q_mask)
+            m_out = torch.cat((m_out,out[-1].unsqueeze(0)))
 
-        preds_no_grad = preds_no_grad
+        m_out = m_out.masked_fill(torch.isnan(m_out), 0)
 
+        self.preds = self.linear_out(m_out)
+        preds_no_grad = self.preds.detach()
 
-        return preds_no_grad.detach().cpu().numpy()
+        return preds_no_grad.cpu().numpy()
 
-    def calc_reward(self,search_results,target):
-        return self.reward_function(search_results,target)
+    def predict(self,x,q_mask):
+        #print("x:",x.size())
+        with torch.no_grad():
+            self.model.eval()
+            max_len = x.size(0)
 
-    def update_policy(self,reward):
+            m_out = self.linear_in(x[0]).unsqueeze(0)
+
+            lin_in = self.linear_in(x)
+
+            q_mask = q_mask == 1
+
+            for i in range(1,max_len):
+                mask = (torch.triu(torch.ones(i, i)) == 1).transpose(0, 1).float()
+                mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
+
+                out = self.model(lin_in, m_out, tgt_mask=mask, src_key_padding_mask=q_mask)
+                m_out = torch.cat((m_out,out[-1].unsqueeze(0)))
+
+            m_out = m_out.masked_fill(torch.isnan(m_out), 0)
+            self.preds = self.linear_out(m_out)
+
+            return self.preds.detach().cpu().numpy()
+
+    def calc_reward(self,*args,**kwargs):
+        return self.reward_function(*args,**kwargs)
+
+    def update_policy(self,reward,update = True):
         # Update network weights
-        batch_size = len(reward)
-        reward_t = torch.zeros(self.preds.size(0),batch_size).to(self.device).type(torch.float64)
+        reward = Variable(reward[:self.preds.size(0)])
+        batch_size = reward.size(1)
+        self.preds = torch.softmax(self.preds,dim=2)
 
-        for i in range(batch_size):
-            reward_t[:,i] = reward[i]
-
-        probs = torch.softmax(self.preds,dim=2)
-        #print("probs:",probs.size())
-        #print("reward:", reward_t.size())
-        #print("reward:", reward_t)
         h = torch.Tensor(batch_size).zero_().to(self.device).type(torch.float64)
-        for i in range(probs.size(0)):
-            h+= torch.sum (torch.mul( probs[i] , torch.log(probs[i]) ) ,dim=1)
+        for i in range(self.preds.size(0)):
+            h+= torch.sum (torch.mul( self.preds[i] , torch.log(self.preds[i]) ) ,dim=1)
 
 
         regularization = torch.mean( - torch.Tensor(batch_size).fill_(0.001).to(self.device).type(torch.float64) * h)
-        #print("regularization:",regularization.size())
-        #print("regularization:", regularization)
 
-        l1 = torch.log(probs)
+        l1 = torch.log(self.preds)
         #print("l1:", l1.size())
-        l2 = l1 * Variable(reward_t.unsqueeze(2))
+        #print("reward:", reward.size())
+        l2 = l1 * reward
         #print("l2:",l2.size())
         s1 = torch.mean( torch.sum( torch.mean( l2 ,dim=2 ) , dim=0 ))
         #print("s1:", s1.size())
         #print("s1 item:", s1.item())
-        loss = s1 + regularization
+        loss = -(s1 + regularization)
 
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+        if update:
+            loss.backward()
+            self.optimizer.step()
         #print("loss:",loss.item())
         return loss.item()
 
@@ -120,25 +134,44 @@ class RLTransformer:
         save_path = self.save_path + self.exp_name + "/best"
         self._save(epoch,save_path)
 
-    def _save(self,epoch,save_path):
+    def _save(self, epoch, save_path):
+
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': self.linear_in.state_dict(),
+        }, save_path + "/linear_in.pt")
 
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.model.state_dict()
-            }, save_path+"/model.pt")
+            'optimizer_state_dict': self.optimizer.state_dict()
+        }, save_path + "/model.pt")
 
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': self.linear_out.state_dict(),
+        }, save_path + "/linear_out.pt")
 
-    def load(self,save_path,train):
+    def load(self, save_path, train):
 
-        checkpoint = torch.load(save_path+"/model.pt")
+        checkpoint = torch.load(save_path + "/model.pt")
         self.model.load_state_dict(checkpoint["model_state_dict"])
-        self.model.load_state_dict(checkpoint["optimizer_state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         epoch = checkpoint["epoch"]
+
+        checkpoint = torch.load(save_path + "/linear_in.pt")
+        self.linear_in.load_state_dict(checkpoint["model_state_dict"])
+
+        checkpoint = torch.load(save_path + "/linear_out.pt")
+        self.linear_out.load_state_dict(checkpoint["model_state_dict"])
 
         if train:
             self.model.train()
+            self.linear_in.train()
+            self.linear_out.train()
         else:
             self.model.eval()
+            self.linear_in.eval()
+            self.linear_out.eval()
 
         return epoch

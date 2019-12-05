@@ -41,65 +41,76 @@ class MyTransformer:
         self.d_mdodel=d_model
         print("#parameter:", sum([np.prod(p.size()) for p in self.model.parameters()]))
 
-    def train(self,x,y,y_tok):
+    def train(self,x,y,y_tok,x_mask,y_mask):
         #print("x:",x.size())
         #print("y:",y.size())
 
         self.optimizer.zero_grad()
         self.model.train()
         targets = y_tok.type(torch.long).view(-1)
+        #print(y[0,0])
         #y = torch.cat((torch.mean(x,dim=0).unsqueeze(0).cuda().double(),y))
-        y = torch.cat((torch.zeros(1,x.size(1),x.size(2)).cuda().double(), y))
-        tgt_mask = self.model.generate_square_subsequent_mask(y.size(0))
-        tgt_mask=tgt_mask.cuda()
-        tgt_mask=tgt_mask.double()
 
+        mask = (torch.triu(torch.ones(y.size(0),y.size(0))) == 1).transpose(0, 1).float()
+        tgt_mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
+        x_mask = x_mask == 1
+        y_mask = y_mask == 1
         lin_in = self.linear_in(x)
         tgt = self.linear_in(y)
 
-        output = self.model(lin_in,tgt,tgt_mask=tgt_mask)
-
+        output = self.model(lin_in,tgt,tgt_mask=tgt_mask,src_key_padding_mask=x_mask,tgt_key_padding_mask=y_mask)
+        output = output.masked_fill(torch.isnan(output), 0)
         lin_out = self.linear_out(output)
 
-        preds = lin_out[1:].view(-1,self.vocab_size)
+        preds = lin_out.view(-1,self.vocab_size)
         #print("preds",preds.size())
 
         #print("output resize:",output.view(-1,self.vocab_size).size())
         loss = self.criterion(preds,targets)
+        #print(torch.argmax(lin_out,dim=2)[:,0])
+        #print(torch.argmax(lin_out, dim=2)[:, 1])
+        #print(torch.argmax(lin_out, dim=2)[:, 2])
         loss.backward()
         #torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.5)
         self.optimizer.step()
 
         return loss.item(),lin_out.detach().cpu().numpy()
 
-    def predict(self,x,y):
+    def predict(self,x,y,x_mask,y_mask):
 
         with torch.no_grad():
             self.model.eval()
-            max_len = y.size(0)+1
-            mask = (torch.triu(torch.ones(max_len, max_len)) == 1).transpose(0, 1).float()
-            mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
+            max_len = y.size(0)
 
-            output = torch.Tensor(max_len,x.size(1),self.d_mdodel).fill_(0).cuda().double()
-            #output[0] = self.linear_in(torch.mean(x,dim=0))
+            #output = torch.zeros(y.size(0),y.size(1),self.d_mdodel).cuda()
+            #m_out = self.linear_in(torch.mean(x, dim=0)).unsqueeze(0)
+            #m_out = y[0]
+            m_out = torch.zeros(y.size(0),y.size(1),self.d_mdodel).cuda().double()
+            #print(y.size())
+            m_out[0] = self.linear_in(x[0])
             lin_in = self.linear_in(x)
-            for i in range(1,max_len):
+            x_mask = x_mask == 1
+            y_mask = y_mask == 1
+            #cat = torch.ones(1, m_out.size(1), m_out.size(2)).cuda().double()
+            #m_out = torch.cat((m_out, cat))
+            for i in range(1, max_len):
 
-                #in_x = x
-                tgt = output[:i]
+                mask = (torch.triu(torch.ones(i, i)) == 1).transpose(0, 1).float()
+                mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
+                #print(y_mask.size())
+                #print(y_mask[:, :i].size())
+                out = self.model(lin_in, m_out[:i], tgt_mask=mask,src_key_padding_mask=x_mask,tgt_key_padding_mask=y_mask[:,:i])
 
-                #print("x",in_x.size())
-                #print("tgt",tgt.size())
+                #m_out = torch.cat((m_out, cat))
+                m_out[i] = out[-1]
 
-                #print("x_l",lin_in.size())
-                m_out = self.model(lin_in,tgt,tgt_mask=mask[:i,:i])
-                #print(m_out.size())
-                output[i] = m_out[-1]
-
+            m_out = m_out.masked_fill(torch.isnan(m_out), 0)
             lin_out = self.linear_out(m_out)
+
             output_flat = lin_out.view(-1, self.vocab_size)
             targets = y.type(torch.long).view(-1)
             loss = self.criterion(output_flat, targets).item()
+            #loss = 0
             #print(tgt.view(-1))
 
 
@@ -126,7 +137,7 @@ class MyTransformer:
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.model.state_dict()
+            'optimizer_state_dict': self.optimizer.state_dict()
             }, save_path+"/model.pt")
 
         torch.save({
@@ -139,7 +150,7 @@ class MyTransformer:
 
         checkpoint = torch.load(save_path+"/model.pt")
         self.model.load_state_dict(checkpoint["model_state_dict"])
-        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        #self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         epoch = checkpoint["epoch"]
 
         checkpoint = torch.load(save_path + "/linear_in.pt")

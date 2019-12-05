@@ -1,15 +1,22 @@
 import numpy as np
+import torch
 
-class RecallReward:
+class RecallRewardMean:
     def __init__(self):
         pass
-    def __call__(self,search_results,target,base_reward):
+    def __call__(self,search_results,target,base_reward,length):
         rewards = []
-        for i in range(len(search_results)):
+        mr = []
+        batch_size = len(search_results)
+        for i in range(batch_size):
             recall = recll_40(search_results[i],target[i])
             reward = recall - (base_reward[i]+0.0001)
-            rewards.append(reward)
-        return rewards
+            mr.append(reward)
+            rewards.append(torch.Tensor(length, 1).fill_(reward / batch_size))
+
+        rewards = torch.stack(rewards, dim=1).cuda().double()
+        return rewards,np.mean(mr)
+
 
 def get_documents_from_result(results):
 
