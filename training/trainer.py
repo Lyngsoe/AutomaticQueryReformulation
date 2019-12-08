@@ -5,9 +5,10 @@ import torch
 import os
 import jsonlines
 import time
+import json
 
 class Trainer:
-    def __init__(self,model,base_path,batch_size=8,epoch=0,max_epoch=50,device="gpu",max_seq_len=300):
+    def __init__(self,model,base_path,batch_size=8,epoch=0,max_epoch=50,device="gpu",max_seq_len=300,specs=None):
         self.model = model
         self.base_path = base_path
         self.batch_size = batch_size
@@ -18,6 +19,9 @@ class Trainer:
         self.min_test_loss = None
         self.exp_path = model.save_path + model.exp_name
         self.make_dir()
+        if specs is not None:
+            specs.update({"model_name:": model.exp_name})
+            json.dump(specs,open(self.exp_path+"/specs.json",'w'))
 
     def evaluate(self,train_loss,train_iter):
         eval_data = SquadDataloader2(base_path=self.base_path,batch_size=1,max_length=self.max_seq_len,eval=True)
@@ -40,7 +44,7 @@ class Trainer:
                 tqdm.write("target: {} loss: {}".format(targets,loss))
                 tqdm.write("\n")
             i_eval+=1
-            if i_eval > 100:
+            if i_eval > 10:
                 break
 
         test_loss=test_loss/i_eval
@@ -67,7 +71,7 @@ class Trainer:
     def train(self):
 
         while self.epoch < self.max_epoch:
-            pbar = tqdm(total=int(720 / self.batch_size), desc="training batches for epoch {}".format(self.epoch))
+            pbar = tqdm(total=int(86821 / self.batch_size), desc="training batches for epoch {}".format(self.epoch))
             train_data = SquadDataloader2(base_path=self.base_path, batch_size=self.batch_size, max_length=self.max_seq_len, eval=False)
             train_iter = 0
             mbl = 0
@@ -91,17 +95,17 @@ class Trainer:
                 pbar.set_description("training batches for epoch {} with training loss: {:.5f} train: {:.2f} load: {:.2f}".format(self.epoch, mbl/train_iter ,total_train_time / train_iter, total_data_load_time / train_iter))
                 pbar.update()
                 start_data_load = time.time()
-                if train_iter % 1000 == 0:
-                    pbar.close()
+                if train_iter % 100 == 0:
+                    #pbar.close()
                     sentences = construct_sentence(predictions)
                     tqdm.write("\nTRAIN:\n")
                     for s in sentences:
                         tqdm.write("prediction: {}".format(s))
                     train_loss = mbl / train_iter
-                    self.evaluate(train_loss,train_iter)
-                    pbar = tqdm(total=int(86821 / self.batch_size),desc="training batches for epoch {}".format(self.epoch))
-                    pbar.update(train_iter)
-                    #break
+                    #self.evaluate(train_loss,train_iter)
+                    #pbar = tqdm(total=int(86821 / self.batch_size),desc="training batches for epoch {}".format(self.epoch))
+                    #pbar.update(train_iter)
+                    break
 
             pbar.close()
             if train_iter == 0:

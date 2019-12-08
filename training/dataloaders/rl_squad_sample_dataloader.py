@@ -20,15 +20,14 @@ class RLSquadDataloader:
         q_txt = []
         base_rewards = []
 
+        try:
+            txt = self.reader.readline()
+            qa = orjson.loads(txt)
+        except (EOFError, JSONDecodeError):
+            if len(q_embedding) < 1:
+                raise StopIteration
+
         for i in range(self.batch_size):
-            try:
-                txt = self.reader.readline()
-                qa = orjson.loads(txt)
-            except (EOFError, JSONDecodeError):
-                if len(q_embedding) < 1:
-                    raise StopIteration
-                else:
-                    return self.on_return(q_embedding, relevant_documents, q_txt,base_rewards)
 
             # X
             base_rewards.append(qa["base_reward"])
@@ -60,8 +59,6 @@ class RLSquadDataloader:
             mask_q.append(self.create_mask(seq_len, max_seq_len))
 
         q_mask = np.stack(mask_q)
-
-
 
 
         if self.eval:

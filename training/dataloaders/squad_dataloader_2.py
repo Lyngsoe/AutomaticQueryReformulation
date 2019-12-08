@@ -116,8 +116,8 @@ class SquadDataloader2:
 
     def create_mask(self,seq_len,max_seq_len):
 
-        m = [1 for i in range(seq_len)]
-        m2 = [0 for i in range(max_seq_len-seq_len)]
+        m = [0 for i in range(seq_len)]
+        m2 = [1 for i in range(max_seq_len-seq_len)]
         m.extend(m2)
         #print(m)
         #print(len(m)," ", max_seq_len)

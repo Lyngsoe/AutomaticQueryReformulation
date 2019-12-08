@@ -26,8 +26,7 @@ def read_squad(path):
                     context_answer = context+" * "+answer
                     qas_to_write.append({"question":q.lower(),"context":context_answer.lower(),"id":q_id,"title":title})
 
-        if len(qas_to_write) > 5000:
-            break
+
     return qas_to_write
 
 
@@ -97,10 +96,11 @@ for qa in tqdm(qas,desc="Cleaning questions and context for train"):
                "question_tokens":q_tokens,"question_emb":[x.tolist() for x in q_emb],"question_token_ids":[int(x) for x in q_token_ids],"id":qa["id"],"title":qa["title"]}
     new_qas.append(new_qa)
 
-    #if len(new_qas) > 10000:
+    if len(new_qas) > 5000:
         #random.shuffle(new_qas)
         #write_batch(qa_writer,new_qas)
         #new_qas = []
+        break
 
 random.shuffle(new_qas)
 write_batch(qa_writer,new_qas)
@@ -126,10 +126,11 @@ for qa in tqdm(qas_eval,desc="Cleaning questions and context in eval"):
                "question_token_ids": [int(x) for x in q_token_ids],"id":qa["id"],"title":qa["title"]}
     new_qas.append(new_qa)
 
-    #if len(new_qas) > 10000:
+    if len(new_qas) > 100:
         #random.shuffle(new_qas)
         #write_batch(qa_writer_eval, new_qas)
         #new_qas = []
+        break
 
 random.shuffle(new_qas)
 write_batch(qa_writer_eval,new_qas)

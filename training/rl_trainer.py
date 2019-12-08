@@ -1,14 +1,15 @@
 from dataset.bertify import construct_sentence,prune
-from training.dataloaders.rl_squad_dataloader import RLSquadDataloader
+from training.dataloaders.rl_squad_sample_dataloader import RLSquadDataloader
 from tqdm import tqdm
 import torch
 import os
 import jsonlines
 import time
 import numpy as np
+import json
 
 class Trainer:
-    def __init__(self,model,base_path,search_engine,batch_size=1,epoch=0,max_epoch=50,device="gpu",max_seq_len=300):
+    def __init__(self,model,base_path,search_engine,batch_size=1,epoch=0,max_epoch=50,device="gpu",max_seq_len=300,specs=None):
         self.model = model
         self.base_path = base_path
         self.batch_size = batch_size
@@ -20,6 +21,9 @@ class Trainer:
         self.exp_path = model.save_path + model.exp_name
         self.search_engine = search_engine
         self.make_dir()
+        if specs is not None:
+            specs.update({"model_name:":model.exp_name})
+            json.dump(specs,open(self.exp_path+"/specs.json",'w'))
 
     def evaluate(self,train_loss,train_reward):
         eval_data = RLSquadDataloader(base_path=self.base_path,batch_size=1,max_length=self.max_seq_len,eval=True)
@@ -38,13 +42,13 @@ class Trainer:
             predicted_sentence = construct_sentence(predictions)
             sentence_cutoff = prune(predicted_sentence)
             search_results = self.search_engine.search(sentence_cutoff)
-            reward,mean_reward = self.model.reward_function(search_results, relevant_documents, base_reward,q_emb.size(0))
-            loss = self.model.update_policy(reward,update=False)
+            reward,base_reward,mean_reward = self.model.reward_function(search_results, relevant_documents, base_reward,q_emb.size(0))
+            loss = self.model.update_policy(reward,base_reward,update=False)
 
             test_loss+=loss
             test_reward+=mean_reward
             pbar.update()
-            if i_eval < 6:
+            if i_eval < 3:
                 tqdm.write("#### EVAL")
                 tqdm.write("query: {}".format(q_txt))
                 tqdm.write("prediction: {}".format(predicted_sentence))
@@ -71,10 +75,10 @@ class Trainer:
             self.model.save_best(self.epoch)
 
         self.model.save_latest(self.epoch)
+        tqdm.write("\n\n####################")
         tqdm.write("model saved!")
-
         tqdm.write("epoch: {} train_loss: {} train_reward: {}  test_loss: {}  test_reward: {}".format(self.epoch,train_loss,train_reward,test_loss,test_reward))
-
+        tqdm.write("####################\n\n")
 
     def train(self):
 
@@ -102,11 +106,11 @@ class Trainer:
                 sentence_cutoff = prune(predicted_sentence)
                 #print(sentence_cutoff)
                 search_results = self.search_engine.search(sentence_cutoff)
-                reward,mean_reward = self.model.reward_function(search_results,relevant_documents,base_reward,x_tensor.size(0))
+                reward,base_reward,mean_reward = self.model.reward_function(search_results,relevant_documents,base_reward,x_tensor.size(0))
                 total_data_load_time += time.time() - start_data_load
 
                 start_train = time.time()
-                total_loss += self.model.update_policy(reward)
+                total_loss += self.model.update_policy(reward,base_reward)
                 total_train_time += time.time() - start_train
 
                 total_rewards += mean_reward
@@ -115,13 +119,13 @@ class Trainer:
                 start_data_load = time.time()
                 if train_iter % 100 == 0:
                     [tqdm.write(sentence) for sentence in predicted_sentence[:4]]
-                if train_iter % 1000 == 0:
-                    #pbar.close()
-                    train_loss = total_loss / train_iter
-                    train_reward = total_rewards / train_iter
-                    self.evaluate(train_loss,train_reward)
+                if train_iter % 100 == 0:
+                    pbar.close()
+                    #train_loss = total_loss / train_iter
+                    #train_reward = total_rewards / train_iter
+                    #self.evaluate(train_loss,train_reward)
                     #tqdm.write(predicted_sentence[0])
-                    #break
+                    break
 
             pbar.close()
 

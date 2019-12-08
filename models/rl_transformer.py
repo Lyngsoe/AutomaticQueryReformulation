@@ -35,7 +35,8 @@ class RLTransformer:
         self.d_model = d_model
         self.lr = lr  # learning rate
         params = list(self.linear_in.parameters()) + list(self.model.parameters()) + list(self.linear_out.parameters())
-        self.optimizer = torch.optim.SGD(params, lr=self.lr,weight_decay=l2)
+        #self.optimizer = torch.optim.SGD(params, lr=self.lr,weight_decay=l2)
+        self.optimizer = torch.optim.Adam(params, lr=self.lr, weight_decay=l2)
         self.model.cuda()
         self.model.double()
         print("#parameter:", sum([np.prod(p.size()) for p in self.model.parameters()]))
@@ -72,8 +73,8 @@ class RLTransformer:
         with torch.no_grad():
             self.model.eval()
             max_len = x.size(0)
-
-            m_out = self.linear_in(x[0]).unsqueeze(0)
+            sos_token = torch.Tensor(x.size(1), x.size(2)).fill_(0.1).cuda().double()
+            m_out = self.linear_in(sos_token).unsqueeze(0)
 
             lin_in = self.linear_in(x)
 
@@ -94,33 +95,38 @@ class RLTransformer:
     def calc_reward(self,*args,**kwargs):
         return self.reward_function(*args,**kwargs)
 
-    def update_policy(self,reward,update = True):
+    def update_policy(self,reward,base_reward,update = True):
         # Update network weights
-        reward = Variable(reward[:self.preds.size(0)])
+        reward = Variable(reward[:self.preds.size(0)].unsqueeze(2))
+        base_reward = Variable(base_reward[:self.preds.size(0)].unsqueeze(2))
+
         batch_size = reward.size(1)
         self.preds = torch.softmax(self.preds,dim=2)
-
         h = torch.Tensor(batch_size).zero_().to(self.device).type(torch.float64)
         for i in range(self.preds.size(0)):
             h+= torch.sum (torch.mul( self.preds[i] , torch.log(self.preds[i]) ) ,dim=1)
+        regularization = torch.mean(torch.Tensor(batch_size).fill_(0.1).to(self.device).type(torch.float64) * h)
 
 
-        regularization = torch.mean( - torch.Tensor(batch_size).fill_(0.001).to(self.device).type(torch.float64) * h)
-
-        l1 = torch.log(self.preds)
-        #print("l1:", l1.size())
         #print("reward:", reward.size())
-        l2 = l1 * reward
-        #print("l2:",l2.size())
-        s1 = torch.mean( torch.sum( torch.mean( l2 ,dim=2 ) , dim=0 ))
-        #print("s1:", s1.size())
-        #print("s1 item:", s1.item())
-        loss = -(s1 + regularization)
+        q_expected = torch.log(torch.max(self.preds)) * reward
+        #print("q_expected:",q_expected.size())
+        q_expected = torch.mean(torch.sum(q_expected.squeeze(0), dim=0))
+        #print("q_expected:", q_expected)
+
+        q0_expected = torch.log(torch.max(self.preds)) * base_reward
+        #print("q0_expected:", q0_expected.size())
+        q0_expected = torch.mean(torch.sum(q0_expected.squeeze(0), dim=0))
+        #print("q0_expected:", q0_expected)
+
+        #print(regularization)
+        loss = -((q_expected - q0_expected) - regularization)
 
         if update:
             loss.backward()
             self.optimizer.step()
         #print("loss:",loss.item())
+
         return loss.item()
 
     def get_exp_name(self):
@@ -156,7 +162,7 @@ class RLTransformer:
 
         checkpoint = torch.load(save_path + "/model.pt")
         self.model.load_state_dict(checkpoint["model_state_dict"])
-        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        #self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         epoch = checkpoint["epoch"]
 
         checkpoint = torch.load(save_path + "/linear_in.pt")
