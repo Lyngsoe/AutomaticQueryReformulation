@@ -1,5 +1,5 @@
 from training.trainer import Trainer
-from models.LSTM_auto_encoder_1 import LSTMAutoEncoder
+from models.LSTM_attention import LSTMAutoEncoder
 import torch
 
 
@@ -19,6 +19,7 @@ lr = 0.0001
 epochs = 250
 encoder_layers = 1
 decoder_layers = 2
+
 
 specs = {
     "vocab_size":vocab_size,

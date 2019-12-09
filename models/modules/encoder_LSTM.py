@@ -7,7 +7,7 @@ class EncoderLSTM(nn.Module):
         super(EncoderLSTM, self).__init__()
         self.num_layers=layers
         self.hidden_size = hidden_size
-        self.lstm = nn.LSTM(input_size, hidden_size,bidirectional=True,num_layers=layers,dropout=dropout)
+        self.lstm = nn.LSTM(input_size, hidden_size,num_layers=layers,dropout=dropout)
 
     def forward(self, input):
         output, hidden = self.lstm(input.float())

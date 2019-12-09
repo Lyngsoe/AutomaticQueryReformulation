@@ -2,7 +2,7 @@ import orjson
 import numpy as np
 from json.decoder import JSONDecodeError
 
-class SquadDataloaderSubwords:
+class SquadDataloaderQ2QSubwords:
     def __init__(self,base_path,max_length,eval,batch_size):
 
 
@@ -37,8 +37,8 @@ class SquadDataloaderSubwords:
 
 
             # X
-            inp = qa["context_token_ids"]
-            source = qa["context"]
+            inp = qa["question_token_ids"]
+            source = qa["question"]
             input_batch.append(inp)
             sources.append(source)
 

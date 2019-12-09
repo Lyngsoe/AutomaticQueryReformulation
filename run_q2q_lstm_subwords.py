@@ -1,4 +1,4 @@
-from training.trainer_subwords import TrainerSubwords
+from training.trainer_q2q_subwords import TrainerQ2QSubwords
 from models.LSTM_auto_encoder_1 import LSTMAutoEncoder
 import torch
 
@@ -13,11 +13,11 @@ base_path = "/media/jonas/archive/master/data/squad2/"
 vocab_size = 30522
 emb_size = 1 # embedding dimension
 hidden_size = 256 # the dimension
-dropout = 0.9 # the dropout value
+dropout = 0.2 # the dropout value
 batch_size = 8
-lr = 0.00001
+lr = 0.01
 epochs = 250
-l2 = 0.5
+l2 = 0
 encoder_layers = 1
 decoder_layers = 2
 
@@ -41,10 +41,10 @@ if load:
     load_path = "/media/jonas/archive/master/data/squad2/experiments/LSTM__12-09_08:30"
     model = LSTMAutoEncoder(base_path, word_emb_size=emb_size, vocab_size=vocab_size, device=device,dropout=dropout, hidden_size=hidden_size,decoder_layers=decoder_layers,encoder_layers=encoder_layers, lr=lr,l2=l2)
     epoch = model.load(load_path  + "/latest/", train=True)
-    trainer = TrainerSubwords(model=model, base_path=base_path, batch_size=batch_size, device=device, epoch=epoch,max_epoch=epochs,specs=specs)
+    trainer = TrainerQ2QSubwords(model=model, base_path=base_path, batch_size=batch_size, device=device, epoch=epoch,max_epoch=epochs,specs=specs)
 else:
     model = LSTMAutoEncoder(base_path, word_emb_size=emb_size, vocab_size=vocab_size, device=device,dropout=dropout,decoder_layers=decoder_layers,encoder_layers=encoder_layers, hidden_size=hidden_size, lr=lr,l2=l2)
-    trainer = TrainerSubwords(model=model, base_path=base_path, batch_size=batch_size, max_epoch=epochs, device=device,specs=specs)
+    trainer = TrainerQ2QSubwords(model=model, base_path=base_path, batch_size=batch_size, max_epoch=epochs, device=device,specs=specs)
 
 
 trainer.train()

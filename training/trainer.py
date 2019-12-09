@@ -44,7 +44,7 @@ class Trainer:
                 tqdm.write("target: {} loss: {}".format(targets,loss))
                 tqdm.write("\n")
             i_eval+=1
-            if i_eval > 10:
+            if i_eval > 100:
                 break
 
         test_loss=test_loss/i_eval
@@ -101,17 +101,22 @@ class Trainer:
                     tqdm.write("\nTRAIN:\n")
                     for s in sentences[:4]:
                         tqdm.write("prediction: {}".format(s))
-                    #train_loss = mbl / train_iter
-                    #self.evaluate(train_loss,train_iter)
-                    #pbar = tqdm(total=int(86821 / self.batch_size),desc="training batches for epoch {}".format(self.epoch))
-                    #pbar.update(train_iter)
-                    break
+                    train_loss = mbl / train_iter
+                    self.evaluate(train_loss,train_iter)
+                    pbar = tqdm(total=int(86821 / self.batch_size),desc="training batches for epoch {}".format(self.epoch))
+                    pbar.update(train_iter)
+                    #break
 
-            #pbar.close()
+            pbar.close()
             if train_iter == 0:
                 train_loss = 0
             else:
                 train_loss = mbl / train_iter
+
+            sentences = construct_sentence(predictions)
+            tqdm.write("\nTRAIN:\n")
+            for s in sentences[:4]:
+                tqdm.write("prediction: {}".format(s))
             self.evaluate(train_loss,train_iter)
             self.epoch += 1
 

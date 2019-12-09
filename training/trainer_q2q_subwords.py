@@ -1,5 +1,5 @@
 from dataset.bertify import construct_sentence
-from training.dataloaders.squad_dataloader_subwords import SquadDataloaderSubwords
+from training.dataloaders.squad_dataloader_subwords_q2q import SquadDataloaderQ2QSubwords
 from tqdm import tqdm
 import torch
 import os
@@ -7,7 +7,7 @@ import jsonlines
 import time
 import json
 
-class TrainerSubwords:
+class TrainerQ2QSubwords:
     def __init__(self,model,base_path,batch_size=8,epoch=0,max_epoch=50,device="gpu",max_seq_len=300,specs=None):
         self.model = model
         self.base_path = base_path
@@ -24,7 +24,7 @@ class TrainerSubwords:
             json.dump(specs,open(self.exp_path+"/specs.json",'w'))
 
     def evaluate(self,train_loss,train_iter):
-        eval_data = SquadDataloaderSubwords(base_path=self.base_path,batch_size=1,max_length=self.max_seq_len,eval=True)
+        eval_data = SquadDataloaderQ2QSubwords(base_path=self.base_path,batch_size=1,max_length=self.max_seq_len,eval=True)
         i_eval = 0
         test_loss = 0
         pbar = tqdm(total=5928, desc="evaluating batches for epoch {}".format(self.epoch))
@@ -76,7 +76,7 @@ class TrainerSubwords:
 
         while self.epoch < self.max_epoch:
             pbar = tqdm(total=int(86821 / self.batch_size), desc="training batches for epoch {}".format(self.epoch))
-            train_data = SquadDataloaderSubwords(base_path=self.base_path, batch_size=self.batch_size, max_length=self.max_seq_len, eval=False)
+            train_data = SquadDataloaderQ2QSubwords(base_path=self.base_path, batch_size=self.batch_size, max_length=self.max_seq_len, eval=False)
             train_iter = 0
             mbl = 0
             total_train_time = 0
@@ -98,7 +98,7 @@ class TrainerSubwords:
                 pbar.set_description("training batches for epoch {} with training loss: {:.6f} train: {:.2f} load: {:.2f}".format(self.epoch, mbl/train_iter ,total_train_time / train_iter, total_data_load_time / train_iter))
                 pbar.update()
                 start_data_load = time.time()
-                if train_iter % 100 == 0:
+                if train_iter % 1000 == 0:
                     pbar.close()
                     sentences = construct_sentence(predictions)
                     tqdm.write("\nTRAIN:\n")
