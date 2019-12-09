@@ -70,27 +70,27 @@ class RLTransformer:
 
     def predict(self,x,q_mask):
         #print("x:",x.size())
-        with torch.no_grad():
-            self.model.eval()
-            max_len = x.size(0)
-            sos_token = torch.Tensor(x.size(1), x.size(2)).fill_(0.1).cuda().double()
-            m_out = self.linear_in(sos_token).unsqueeze(0)
+        #with torch.no_grad():
+        #self.model.eval()
+        max_len = x.size(0)
+        sos_token = torch.Tensor(x.size(1), x.size(2)).fill_(0.1).cuda().double()
+        m_out = self.linear_in(sos_token).unsqueeze(0)
 
-            lin_in = self.linear_in(x)
+        lin_in = self.linear_in(x)
 
-            q_mask = q_mask == 1
+        q_mask = q_mask == 1
 
-            for i in range(1,max_len):
-                mask = (torch.triu(torch.ones(i, i)) == 1).transpose(0, 1).float()
-                mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
+        for i in range(1,max_len):
+            mask = (torch.triu(torch.ones(i, i)) == 1).transpose(0, 1).float()
+            mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
 
-                out = self.model(lin_in, m_out, tgt_mask=mask, src_key_padding_mask=q_mask)
-                m_out = torch.cat((m_out,out[-1].unsqueeze(0)))
+            out = self.model(lin_in, m_out, tgt_mask=mask, src_key_padding_mask=q_mask)
+            m_out = torch.cat((m_out,out[-1].unsqueeze(0)))
 
-            m_out = m_out.masked_fill(torch.isnan(m_out), 0)
-            self.preds = self.linear_out(m_out)
+        m_out = m_out.masked_fill(torch.isnan(m_out), 0)
+        self.preds = self.linear_out(m_out)
 
-            return self.preds.detach().cpu().numpy()
+        return self.preds.detach().cpu().numpy()
 
     def calc_reward(self,*args,**kwargs):
         return self.reward_function(*args,**kwargs)

@@ -1,6 +1,6 @@
 import torch
 from models.modules.encoder_LSTM import EncoderLSTM
-from models.modules.Decoder_LSTM import AttnDecoderLSTM
+from models.modules.Decoder_LSTM import DecoderLSTM
 from torch.nn.modules import Linear
 from torch import optim
 import torch.nn as nn
@@ -8,17 +8,17 @@ from datetime import datetime
 import numpy as np
 
 class LSTMAutoEncoder:
-    def __init__(self,base_path,hidden_size=128,word_emb_size=768,vocab_size=30522,lr=0.1,decoder_layers=1,encoder_layers=1,device="cpu",exp_name=None):
+    def __init__(self,base_path,hidden_size=128,word_emb_size=768,vocab_size=30522,lr=0.1,decoder_layers=1,encoder_layers=1,device="cpu",dropout=0.2,exp_name=None):
         self.base_path = base_path
         self.save_path = self.base_path + "experiments/"
         self.device = device
-        self.model_name="LSTM_auto_encoder_1"
+        self.model_name="LSTM"
         self.vocab_size = vocab_size
 
         self.exp_name = exp_name if exp_name is not None else self.get_exp_name()
 
-        self.encoder = EncoderLSTM(word_emb_size, hidden_size,encoder_layers).to(self.device)
-        self.decoder = AttnDecoderLSTM(hidden_size,decoder_layers).to(self.device)
+        self.encoder = EncoderLSTM(word_emb_size, hidden_size,encoder_layers,dropout=dropout).to(self.device)
+        self.decoder = DecoderLSTM(hidden_size,decoder_layers,dropout=dropout).to(self.device)
 
         self.linear_decoder_input = Linear(hidden_size*2,hidden_size).to(self.device)
         self.output = Linear(hidden_size, vocab_size).to(self.device).to(self.device)
@@ -35,8 +35,7 @@ class LSTMAutoEncoder:
         self.decoder_layers = decoder_layers
         print("#parameters:", sum([np.prod(p.size()) for p in parameters]))
 
-    def train(self,input_tensor, target_tensor):
-
+    def train(self,input_tensor, target_tensor,y_tok, x_mask, y_mask):
         #print("x_in:",input_tensor.size())
         #print("y_in:", target_tensor.size())
 
@@ -62,22 +61,24 @@ class LSTMAutoEncoder:
 
             encoder_outputs[ei] = encoder_output[0]
 
+        preds = torch.zeros(target_length,batch_size, self.vocab_size, device=self.device)
         decoder_input = torch.sum(self.linear_decoder_input(encoder_outputs),dim=0)
         decoder_hidden = (torch.stack([decoder_input for i in range(self.decoder_layers)],dim=0),torch.stack([decoder_input for i in range(self.decoder_layers)],dim=0))
         decoder_input = decoder_input.unsqueeze(0)
         for di in range(target_length):
             decoder_output, decoder_hidden = self.decoder(decoder_input,decoder_hidden)
             decoder_input = decoder_output
-            b_target_tensor = target_tensor[di].type(torch.long)
+            b_target_tensor = y_tok[di].type(torch.long)
             pred = self.output(decoder_output)
+            preds[di] = pred.squeeze(0)
             loss += self.criterion(pred.squeeze(0),b_target_tensor)
 
         loss.backward()
         self.optimizer.step()
 
-        return loss.item() / batch_size
+        return loss.item()/target_length,preds.detach().cpu().numpy()
 
-    def predict(self,input_tensor,target_tensor):
+    def predict(self,input_tensor,target_tensor,x_mask,y_mask):
         #print("x_in:",x.size())
         with torch.no_grad():
 
@@ -115,7 +116,7 @@ class LSTMAutoEncoder:
 
                 loss += self.criterion(pred.squeeze(0), b_target_tensor)
 
-        return loss.item() / batch_size, preds.cpu().numpy()
+        return loss.item()/target_length, preds.unsqueeze(1).cpu().numpy()
 
 
     def get_exp_name(self):

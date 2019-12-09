@@ -53,13 +53,13 @@ class SquadDataloaderSubwords:
     def on_return(self,q_batch,y_batch,queries,targets):
         max_seq_len_y = 0
         max_seq_len_q = 0
-
         for q in q_batch:
             seq_len = len(q)
             if seq_len > max_seq_len_q:
                 max_seq_len_q = seq_len
 
         for y in y_batch:
+            y.insert(0, 2)
             seq_len = len(y)
             if seq_len > max_seq_len_y:
                 max_seq_len_y = seq_len
@@ -81,7 +81,6 @@ class SquadDataloaderSubwords:
         new_y_batch = []
         for y in y_batch:
             new_y_batch.append(self.pad_x(y, max_seq_len_y))
-
 
 
         y_batch = np.stack(new_y_batch)

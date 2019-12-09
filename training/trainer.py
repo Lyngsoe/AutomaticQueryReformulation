@@ -96,18 +96,18 @@ class Trainer:
                 pbar.update()
                 start_data_load = time.time()
                 if train_iter % 100 == 0:
-                    #pbar.close()
+                    pbar.close()
                     sentences = construct_sentence(predictions)
                     tqdm.write("\nTRAIN:\n")
-                    for s in sentences:
+                    for s in sentences[:4]:
                         tqdm.write("prediction: {}".format(s))
-                    train_loss = mbl / train_iter
+                    #train_loss = mbl / train_iter
                     #self.evaluate(train_loss,train_iter)
                     #pbar = tqdm(total=int(86821 / self.batch_size),desc="training batches for epoch {}".format(self.epoch))
                     #pbar.update(train_iter)
                     break
 
-            pbar.close()
+            #pbar.close()
             if train_iter == 0:
                 train_loss = 0
             else:

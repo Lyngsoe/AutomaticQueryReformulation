@@ -5,9 +5,10 @@ import torch
 import os
 import jsonlines
 import time
+import json
 
 class TrainerSubwords:
-    def __init__(self,model,base_path,batch_size=8,epoch=0,max_epoch=50,device="gpu",max_seq_len=300):
+    def __init__(self,model,base_path,batch_size=8,epoch=0,max_epoch=50,device="gpu",max_seq_len=300,specs=None):
         self.model = model
         self.base_path = base_path
         self.batch_size = batch_size
@@ -18,6 +19,9 @@ class TrainerSubwords:
         self.min_test_loss = None
         self.exp_path = model.save_path + model.exp_name
         self.make_dir()
+        if specs is not None:
+            specs.update({"model_name:":model.exp_name})
+            json.dump(specs,open(self.exp_path+"/specs.json",'w'))
 
     def evaluate(self,train_loss,train_iter):
         eval_data = SquadDataloaderSubwords(base_path=self.base_path,batch_size=1,max_length=self.max_seq_len,eval=True)
@@ -94,19 +98,19 @@ class TrainerSubwords:
                 pbar.set_description("training batches for epoch {} with training loss: {:.6f} train: {:.2f} load: {:.2f}".format(self.epoch, mbl/train_iter ,total_train_time / train_iter, total_data_load_time / train_iter))
                 pbar.update()
                 start_data_load = time.time()
-                if train_iter % 1000 == 0:
-                    # pbar.close()
+                if train_iter % 100 == 0:
+                    pbar.close()
                     sentences = construct_sentence(predictions)
                     tqdm.write("\nTRAIN:\n")
-                    for s in sentences:
+                    for s in sentences[:4]:
                         tqdm.write("prediction: {}".format(s))
-                    train_loss = mbl / train_iter
+                    #train_loss = mbl / train_iter
                     # self.evaluate(train_loss,train_iter)
                     # pbar = tqdm(total=int(86821 / self.batch_size),desc="training batches for epoch {}".format(self.epoch))
                     # pbar.update(train_iter)
                     break
 
-            pbar.close()
+            #pbar.close()
 
             train_loss = mbl / train_iter
             self.evaluate(train_loss,train_iter)
