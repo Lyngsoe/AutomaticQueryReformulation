@@ -85,14 +85,13 @@ class SquadDataloaderSubwords:
 
         y_batch = np.stack(new_y_batch)
         q_batch = np.stack(new_q_batch)
-        y_toks = np.stack(new_y_batch)
         q_mask = np.stack(mask_q)
         y_mask = np.stack(mask_y)
 
         if self.eval:
-            return q_batch, y_batch, queries, targets, y_toks, q_mask, y_mask
+            return q_batch, y_batch, queries, targets, q_mask, y_mask
 
-        return q_batch, y_batch, y_toks, q_mask, y_mask
+        return q_batch, y_batch, q_mask, y_mask
 
     def pad_x(self,x,max_len):
 

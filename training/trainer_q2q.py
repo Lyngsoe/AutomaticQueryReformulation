@@ -1,5 +1,5 @@
 from dataset.bertify import construct_sentence
-from training.dataloaders.squad_dataloader_subwords import SquadDataloaderSubwords
+from training.dataloaders.squad_dataloader_q2q import SquadDataloaderQ2Q
 from tqdm import tqdm
 import torch
 import os
@@ -7,7 +7,7 @@ import jsonlines
 import time
 import json
 
-class TrainerSubwords:
+class TrainerQ2Q:
     def __init__(self,model,base_path,batch_size=8,epoch=0,max_epoch=50,device="gpu",max_seq_len=300,specs=None):
         self.model = model
         self.base_path = base_path
@@ -20,21 +20,21 @@ class TrainerSubwords:
         self.exp_path = model.save_path + model.exp_name
         self.make_dir()
         if specs is not None:
-            specs.update({"model_name:":model.exp_name})
+            specs.update({"model_name:": model.exp_name})
             json.dump(specs,open(self.exp_path+"/specs.json",'w'))
 
     def evaluate(self,train_loss,train_iter):
-        eval_data = SquadDataloaderSubwords(base_path=self.base_path,batch_size=1,max_length=self.max_seq_len,eval=True)
+        eval_data = SquadDataloaderQ2Q(base_path=self.base_path,batch_size=1,max_length=self.max_seq_len,eval=True)
         i_eval = 0
         test_loss = 0
         pbar = tqdm(total=5928, desc="evaluating batches for epoch {}".format(self.epoch))
-        for eval_x, eval_y,queries,targets,x_mask,y_mask in iter(eval_data):
-            eval_x = torch.tensor(eval_x, device=self.device).type(torch.float64).view(-1, eval_x.shape[0]).unsqueeze(2)
+        for eval_x, eval_y,queries,targets,x_mask,y_mask,y_emb in iter(eval_data):
+            eval_x = torch.tensor(eval_x, device=self.device).type(torch.float64).view(-1, eval_x.shape[0], eval_x.shape[2])
+            y_emb = torch.tensor(y_emb, device=self.device).type(torch.double).view(-1, y_emb.shape[0], y_emb.shape[2])
             eval_y = torch.tensor(eval_y, device=self.device).type(torch.long).view(-1, eval_y.shape[0])
             x_mask = torch.tensor(x_mask, device=self.device).type(torch.float64)
             y_mask = torch.tensor(y_mask, device=self.device).type(torch.float64)
-            loss,predictions = self.model.predict(eval_x,eval_y,x_mask,y_mask)
-
+            loss,predictions = self.model.predict(eval_x,eval_y,x_mask,y_mask,y_emb)
             test_loss+=loss
             pbar.update()
             if i_eval < 3:
@@ -47,7 +47,6 @@ class TrainerSubwords:
             i_eval+=1
             if i_eval > 100:
                 break
-
 
         test_loss=test_loss/i_eval
         pbar.close()
@@ -70,33 +69,34 @@ class TrainerSubwords:
         tqdm.write("epoch: {} train_loss: {}  test_loss: {}".format(self.epoch,train_loss,test_loss))
         tqdm.write("####################\n\n")
 
-
     def train(self):
 
         while self.epoch < self.max_epoch:
             pbar = tqdm(total=int(86821 / self.batch_size), desc="training batches for epoch {}".format(self.epoch))
-            train_data = SquadDataloaderSubwords(base_path=self.base_path, batch_size=self.batch_size, max_length=self.max_seq_len, eval=False)
+            train_data = SquadDataloaderQ2Q(base_path=self.base_path, batch_size=self.batch_size, max_length=self.max_seq_len, eval=False)
             train_iter = 0
             mbl = 0
             total_train_time = 0
             total_data_load_time = 0
             start_data_load = time.time()
-            for x,y,x_mask,y_mask in iter(train_data):
-                x_tensor = torch.tensor(x, device=self.device).type(torch.double).view(-1, x.shape[0]).unsqueeze(2)
-                y_tensor = torch.tensor(y, device=self.device).type(torch.long).view(-1, y.shape[0]).unsqueeze(2)
-                # print(x_mask.shape)
+            for x,y,x_mask,y_mask,y_emb in iter(train_data):
+                x_tensor = torch.tensor(x, device=self.device).type(torch.double).view(-1, x.shape[0], x.shape[2])
+                y_emb = torch.tensor(y_emb, device=self.device).type(torch.double).view(-1, y_emb.shape[0], y_emb.shape[2])
+                y_tensor = torch.tensor(y, device=self.device).type(torch.long).view(-1, y.shape[0])
+                #print(x_mask.shape)
                 x_mask = torch.tensor(x_mask, device=self.device).type(torch.float64)
                 y_mask = torch.tensor(y_mask, device=self.device).type(torch.float64)
+                #print(x_mask.size())
                 total_data_load_time+= time.time() - start_data_load
                 train_iter += 1
                 start_train = time.time()
-                batch_loss,predictions = self.model.train(x_tensor, y_tensor,x_mask,y_mask)
+                batch_loss,predictions = self.model.train(x_tensor, y_tensor,x_mask,y_mask,y_emb)
                 total_train_time += time.time() - start_train
                 mbl += batch_loss
-                pbar.set_description("training batches for epoch {} with training loss: {:.6f} train: {:.2f} load: {:.2f}".format(self.epoch, mbl/train_iter ,total_train_time / train_iter, total_data_load_time / train_iter))
+                pbar.set_description("training batches for epoch {} with training loss: {:.5f} train: {:.2f} load: {:.2f}".format(self.epoch, mbl/train_iter ,total_train_time / train_iter, total_data_load_time / train_iter))
                 pbar.update()
                 start_data_load = time.time()
-                if train_iter % 100 == 0:
+                if train_iter % 500 == 0:
                     pbar.close()
                     sentences = construct_sentence(predictions)
                     tqdm.write("\nTRAIN:\n")
@@ -109,8 +109,15 @@ class TrainerSubwords:
                     #break
 
             pbar.close()
+            if train_iter == 0:
+                train_loss = 0
+            else:
+                train_loss = mbl / train_iter
 
-            train_loss = mbl / train_iter
+            sentences = construct_sentence(predictions)
+            tqdm.write("\nTRAIN:\n")
+            for s in sentences[:4]:
+                tqdm.write("prediction: {}".format(s))
             self.evaluate(train_loss,train_iter)
             self.epoch += 1
 

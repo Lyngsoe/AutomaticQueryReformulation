@@ -1,6 +1,7 @@
 from training.rl_trainer import Trainer
 from models.rl_transformer import RLTransformer
 from models.losses.recall_reward import RecallRewardMean
+from models.losses.rank_loss import RankReward
 from search_engine.elastic_search import ELSearch
 import torch
 
@@ -14,13 +15,13 @@ base_path = "/media/jonas/archive/master/data/rl_squad/"
 
 vocab_size = 30522
 emb_size = 768 # embedding dimension
-d_model = 128 # the dimension of the feedforward network model in nn.TransformerEncoder
-n_layers = 3 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
+d_model = 256 # the dimension of the feedforward network model in nn.TransformerEncoder
+n_layers = 6 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
 nhead = 8 # the number of heads in the multiheadattention models
-dropout = 0.8 # the dropout value
-dff = 512 # dimension of feed forward
+dropout = 0.2 # the dropout value
+dff = d_model*4 # dimension of feed forward
 batch_size = 8
-lr = 0.0001
+lr = 0.00001
 epochs = 250
 l2 = 0
 
@@ -39,10 +40,11 @@ specs = {
 
 
 
-reward_function = RecallRewardMean()
+reward_function = RankReward()
+#reward_function = RecallRewardMean()
 search_engine = ELSearch("squad")
 
-load = True
+load = False
 
 if load:
     load_path = "/media/jonas/archive/master/data/squad/experiments/Transformer__12-07_23:48"

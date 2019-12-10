@@ -12,9 +12,9 @@ def load_results(path):
 
     return train_loss,test_loss
 
-base_path = "/media/jonas/archive/master/data/squad/cluster_exp/09_12_19/experiments/"
+#base_path = "/media/jonas/archive/master/data/squad/cluster_exp/09_12_19/experiments/"
 #base_path = "/home/jonas/data/25_11_19/"
-#base_path = "/media/jonas/archive/master/data/squad/experiments/"
+base_path = "/media/jonas/archive/master/data/squad/experiments/"
 
 ## Subsample data small transformer with 1,3,6 layers
 exps_sub_1 = [
@@ -35,15 +35,22 @@ exps_6_layer = [
     (base_path + "Transformer__12-06_15:20/", "0.5 dropout"),
 ]
 
+
+## attn lstm
+exps_attn = [
+    (base_path + "LSTM_attn__12-09_18:04/", "Attn LSTM"),
+    ("/media/jonas/archive/master/data/squad/cluster_exp/09_12_19/experiments/" + "Transformer__12-06_15:19/", "Transformer Large"),
+]
+
 max_epochs=250
 
 fig = plt.figure()
-st = fig.suptitle("Transformer Large 6 Layer", fontsize="x-large")
+st = fig.suptitle("Transformer vs LSTM", fontsize="x-large")
 plt_train = fig.add_subplot(121)
 plt_test = fig.add_subplot(122,sharey = plt_train)
 
 
-for exp in exps_6_layer:
+for exp in exps_attn:
 
     exp_path = exp[0]
     train_loss,test_loss = load_results(exp_path)

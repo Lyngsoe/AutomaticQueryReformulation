@@ -45,6 +45,8 @@ class RLTransformer:
     def train_predict(self,x,q_mask):
         #print("x:",x.size())
         self.model.train()
+        self.linear_out.train()
+        self.linear_in.train()
         self.optimizer.zero_grad()
         max_len = x.size(0)
 
@@ -71,7 +73,10 @@ class RLTransformer:
     def predict(self,x,q_mask):
         #print("x:",x.size())
         #with torch.no_grad():
-        #self.model.eval()
+        self.model.eval()
+        self.linear_out.eval()
+        self.linear_in.eval()
+
         max_len = x.size(0)
         sos_token = torch.Tensor(x.size(1), x.size(2)).fill_(0.1).cuda().double()
         m_out = self.linear_in(sos_token).unsqueeze(0)
@@ -105,8 +110,7 @@ class RLTransformer:
         h = torch.Tensor(batch_size).zero_().to(self.device).type(torch.float64)
         for i in range(self.preds.size(0)):
             h+= torch.sum (torch.mul( self.preds[i] , torch.log(self.preds[i]) ) ,dim=1)
-        regularization = torch.mean(torch.Tensor(batch_size).fill_(0.1).to(self.device).type(torch.float64) * h)
-
+        regularization = torch.mean(torch.Tensor(batch_size).fill_(0.001).to(self.device).type(torch.float64) * h)
 
         #print("reward:", reward.size())
         q_expected = torch.log(torch.max(self.preds)) * reward

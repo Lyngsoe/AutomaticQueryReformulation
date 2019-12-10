@@ -1,4 +1,4 @@
-from models.LSTM_auto_encoder_1 import LSTMAutoEncoder
+from models.LSTM import LSTMAutoEncoder
 from legacy.squad_dataloader import SquadDataloader
 import torch
 import jsonlines

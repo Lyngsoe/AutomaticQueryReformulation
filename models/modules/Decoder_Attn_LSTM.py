@@ -3,18 +3,21 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class DecoderLSTM(nn.Module):
-    def __init__(self, hidden_size,layers,dropout=0.2):
+    def __init__(self,input_size, hidden_size,layers,dropout=0.2):
         super(DecoderLSTM, self).__init__()
         self.hidden_size = hidden_size
-        self.lstm = nn.LSTM(self.hidden_size*2, self.hidden_size,num_layers=layers,dropout=dropout)
+        self.input_size=input_size
+        self.layers = layers
+        self.lstm = nn.LSTM(input_size, self.hidden_size,num_layers=layers,dropout=dropout)
         self.attn_linear = nn.Linear(hidden_size,hidden_size)
 
 
     def forward(self, input,hidden,enc_seq):
 
-        attention = self.calc_attention(input,enc_seq)
-        lstm_input = torch.cat((input,attention.unsqueeze(0)),dim=2)
-        output, hidden = self.lstm(lstm_input,hidden)
+        attention = self.calc_attention(hidden[0],enc_seq)
+        attention = torch.stack(([attention for i in range(self.layers)]),dim=0)
+        lstm_input = (attention,hidden[1])
+        output, hidden = self.lstm(input,lstm_input)
         return output, hidden
 
     def calc_attention(self,input,enc_seq):

@@ -2,7 +2,7 @@ import orjson
 import numpy as np
 from json.decoder import JSONDecodeError
 
-class SquadDataloader2:
+class SquadDataloaderQ2Q:
     def __init__(self,base_path,max_length,eval,batch_size):
         if eval:
             file_name = "qas_eval.jsonl"
@@ -35,8 +35,8 @@ class SquadDataloader2:
 
 
             # X
-            inp = qa["context_emb"]
-            source = qa["context"]
+            inp = qa["question_emb"]
+            source = qa["question"]
             input_batch.append(inp)
             sources.append(source)
 
@@ -52,21 +52,6 @@ class SquadDataloader2:
     def on_return(self,q_batch,y_batch,queries,targets,y_emb):
         max_seq_len_y = 0
         max_seq_len_q = 0
-
-        new_q_batch = []
-        for q in q_batch:
-            new_q_batch.append(self.add_start_token_x(q))
-        q_batch = new_q_batch
-
-        new_y_batch = []
-        for y in y_batch:
-            new_y_batch.append(self.add_start_token_y(y))
-        y_batch = new_y_batch
-
-        new_y_emb_batch = []
-        for y in y_emb:
-            new_y_emb_batch.append(self.add_start_token_x(y))
-        y_emb = new_y_emb_batch
 
         for q in q_batch:
             seq_len = len(q)
@@ -128,14 +113,6 @@ class SquadDataloader2:
             y.append(1)
         return y[:self.max_length]
 
-    def add_start_token_x(self,x):
-        sos = np.empty(768)
-        sos.fill(0.1)
-        x.insert(0, sos)
-        return x
-    def add_start_token_y(self, y):
-        y.insert(0, 2)
-        return y
 
     def create_mask(self,seq_len,max_seq_len):
 

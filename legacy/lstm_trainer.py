@@ -1,4 +1,4 @@
-from models.LSTM_auto_encoder_1 import LSTMAutoEncoder
+from models.LSTM import LSTMAutoEncoder
 import time
 from training.dataloaders.squad_dataloader_2 import SquadDataloader2
 from embedding_method.embedders import get_embedder

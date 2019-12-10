@@ -45,55 +45,51 @@ class MyTransformer:
 
         print("#parameter:", sum([np.prod(p.size()) for p in self.model.parameters()]))
 
-    def train(self,x,y,y_tok,x_mask,y_mask):
-        #print("x:",x.size())
-        #print("y:",y.size())
+    def train(self,x,y,x_mask,y_mask,y_emb):
+
         self.optimizer.zero_grad()
         self.model.train()
-        targets = y_tok[1:].type(torch.long).view(-1)
-        #print(y[0,0])
-        #y = torch.cat((torch.mean(x,dim=0).unsqueeze(0).cuda().double(),y))
-        sos_token = torch.Tensor(y.size(1),y.size(2)).fill_(0.1).cuda().double()
-        mask = (torch.triu(torch.ones(y.size(0),y.size(0))) == 1).transpose(0, 1).float()
+
+        mask = (torch.triu(torch.ones(y_emb.size(0),y_emb.size(0))) == 1).transpose(0, 1).float()
         tgt_mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
         x_mask = x_mask == 1
         y_mask = y_mask == 1
         lin_in = self.linear_in(self.drop_in(x))
         #y[0] = sos_token
-        tgt = self.linear_in(y)
+        tgt = self.linear_in(y_emb)
 
         output = self.model(lin_in,tgt,tgt_mask=tgt_mask,src_key_padding_mask=x_mask,tgt_key_padding_mask=y_mask)
         output = output.masked_fill(torch.isnan(output), 0)
-        lin_out = self.linear_out(self.drop_out(output[1:]))
+        lin_out = self.linear_out(self.drop_out(output))
 
-        preds = lin_out.view(-1,self.vocab_size)
+        preds = lin_out
         #print("preds",preds.size())
 
         #print("output resize:",output.view(-1,self.vocab_size).size())
-        loss = self.criterion(preds,targets)
-        #print(torch.argmax(lin_out,dim=2)[:,0])
-        #print(torch.argmax(lin_out, dim=2)[:, 1])
-        #print(torch.argmax(lin_out, dim=2)[:, 2])
+        loss = 0
+        for i in range(x.size(1)):
+            p = preds[:, i]
+            y_b = y[i]
+            loss += self.criterion(p,y_b)
+
+        loss/=y.size(0)
+
         loss.backward()
         #torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.5)
         self.optimizer.step()
 
         return loss.item(),lin_out.detach().cpu().numpy()
 
-    def predict(self,x,y,x_mask,y_mask):
+    def predict(self,x,y,x_mask,y_mask,y_emb):
 
         with torch.no_grad():
             self.model.eval()
             max_len = y.size(0)
 
-            #output = torch.zeros(y.size(0),y.size(1),self.d_mdodel).cuda()
-            #m_out = self.linear_in(torch.mean(x, dim=0)).unsqueeze(0)
-            #m_out = y[0]
-            m_out = torch.zeros(y.size(0),y.size(1),self.d_mdodel).cuda().double()
-            #sos_token = torch.Tensor(x.size(1), x.size(2)).fill_(0.1).cuda().double()
-            sos_token = torch.Tensor(1,y.size(1)).fill_(2).cuda().double()
-            #print(sos_token.size())
-            m_out[0] = self.linear_in(sos_token)
+            m_out = torch.zeros(y_emb.size(0),y_emb.size(1),self.d_mdodel).cuda().double()
+
+
+            m_out[0] = self.linear_in(y_emb[0])
             #print(y.size())
             #m_out[0] = self.linear_in(x[0])
             lin_in = self.linear_in(x)
@@ -113,16 +109,22 @@ class MyTransformer:
                 m_out[i] = out[-1]
 
             m_out = m_out.masked_fill(torch.isnan(m_out), 0)
-            lin_out = self.linear_out(m_out[1:])
+            lin_out = self.linear_out(m_out)
 
-            output_flat = lin_out.view(-1, self.vocab_size)
-            targets = y[1:].type(torch.long).view(-1)
-            loss = self.criterion(output_flat, targets).item()
-            #loss = 0
-            #print(tgt.view(-1))
+            preds = lin_out
+            # print("preds",preds.size())
+
+            # print("output resize:",output.view(-1,self.vocab_size).size())
+            loss = 0
+            for i in range(x.size(1)):
+                p = preds[:, i]
+                y_b = y[i]
+                loss += self.criterion(p, y_b)
+
+            loss /= y.size(0)
 
 
-        return loss,lin_out[1:].cpu().numpy()
+        return loss.item(),lin_out.cpu().numpy()
 
     def get_exp_name(self):
         now = datetime.now()

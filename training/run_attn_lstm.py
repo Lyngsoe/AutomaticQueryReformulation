@@ -1,5 +1,5 @@
 from training.trainer import Trainer
-from models.LSTM_auto_encoder_1 import LSTMAutoEncoder
+from models.LSTM import LSTMAutoEncoder
 import torch
 
 

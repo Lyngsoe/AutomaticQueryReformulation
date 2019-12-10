@@ -1,4 +1,4 @@
-from models.LSTM_auto_encoder_1 import LSTMAutoEncoder
+from models.LSTM import LSTMAutoEncoder
 from legacy.dataloader_bpe import DataloaderBPE
 from embedding_method.embedders import get_embedder
 import torch

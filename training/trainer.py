@@ -28,12 +28,13 @@ class Trainer:
         i_eval = 0
         test_loss = 0
         pbar = tqdm(total=5928, desc="evaluating batches for epoch {}".format(self.epoch))
-        for eval_x, eval_y,queries,targets,y_tok,x_mask,y_mask in iter(eval_data):
+        for eval_x, eval_y,queries,targets,x_mask,y_mask,y_emb in iter(eval_data):
             eval_x = torch.tensor(eval_x, device=self.device).type(torch.float64).view(-1, eval_x.shape[0], eval_x.shape[2])
-            y_tok = torch.tensor(y_tok, device=self.device).type(torch.float64).view(-1, y_tok.shape[0])
+            y_emb = torch.tensor(y_emb, device=self.device).type(torch.double).view(-1, y_emb.shape[0], y_emb.shape[2])
+            eval_y = torch.tensor(eval_y, device=self.device).type(torch.long)
             x_mask = torch.tensor(x_mask, device=self.device).type(torch.float64)
             y_mask = torch.tensor(y_mask, device=self.device).type(torch.float64)
-            loss,predictions = self.model.predict(eval_x,y_tok,x_mask,y_mask)
+            loss,predictions = self.model.predict(eval_x,eval_y,x_mask,y_mask,y_emb)
             test_loss+=loss
             pbar.update()
             if i_eval < 3:
@@ -78,10 +79,10 @@ class Trainer:
             total_train_time = 0
             total_data_load_time = 0
             start_data_load = time.time()
-            for x,y,y_tok,x_mask,y_mask in iter(train_data):
+            for x,y,x_mask,y_mask,y_emb in iter(train_data):
                 x_tensor = torch.tensor(x, device=self.device).type(torch.double).view(-1, x.shape[0], x.shape[2])
-                y_tensor = torch.tensor(y, device=self.device).type(torch.double).view(-1, y.shape[0], y.shape[2])
-                y_tok = torch.tensor(y_tok, device=self.device).type(torch.float64).view(-1, y_tok.shape[0])
+                y_emb = torch.tensor(y_emb, device=self.device).type(torch.double).view(-1, y_emb.shape[0], y_emb.shape[2])
+                y_tensor = torch.tensor(y, device=self.device).type(torch.long)
                 #print(x_mask.shape)
                 x_mask = torch.tensor(x_mask, device=self.device).type(torch.float64)
                 y_mask = torch.tensor(y_mask, device=self.device).type(torch.float64)
@@ -89,13 +90,13 @@ class Trainer:
                 total_data_load_time+= time.time() - start_data_load
                 train_iter += 1
                 start_train = time.time()
-                batch_loss,predictions = self.model.train(x_tensor, y_tensor,y_tok,x_mask,y_mask)
+                batch_loss,predictions = self.model.train(x_tensor, y_tensor,x_mask,y_mask,y_emb)
                 total_train_time += time.time() - start_train
                 mbl += batch_loss
                 pbar.set_description("training batches for epoch {} with training loss: {:.5f} train: {:.2f} load: {:.2f}".format(self.epoch, mbl/train_iter ,total_train_time / train_iter, total_data_load_time / train_iter))
                 pbar.update()
                 start_data_load = time.time()
-                if train_iter % 100 == 0:
+                if train_iter % 200 == 0:
                     pbar.close()
                     sentences = construct_sentence(predictions)
                     tqdm.write("\nTRAIN:\n")
