@@ -121,7 +121,7 @@ class Trainer:
 
                 total_rewards += reward
                 total_norm_rewards += reward - base_reward
-                pbar.set_description("training batches for epoch {} with training loss: {:.3f}, normalized reward: {:.6f} reward: {:.6f} base reward {:.6f} train: {:.2f} load: {:.2f}".format(self.epoch, total_loss/train_iter,total_norm_rewards/train_iter,total_rewards/train_iter,base_reward,total_train_time / train_iter, total_data_load_time / train_iter))
+                pbar.set_description("training batches for epoch {} with training loss: {:.3f}, normalized reward: {:.6f} reward: {:.6f} base reward {:.6f} train: {:.2f} load: {:.2f}".format(self.epoch, total_loss/train_iter,reward - base_reward,total_rewards/train_iter,base_reward,total_train_time / train_iter, total_data_load_time / train_iter))
                 pbar.update()
                 start_data_load = time.time()
                 if train_iter % 100 == 0:

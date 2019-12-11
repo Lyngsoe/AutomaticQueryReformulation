@@ -42,15 +42,37 @@ exps_attn = [
     ("/media/jonas/archive/master/data/squad/cluster_exp/09_12_19/experiments/" + "Transformer__12-06_15:19/", "Transformer Large"),
 ]
 
+base_path = "/media/jonas/archive/master/data/squad/cluster_exp/10_12_19/experiments/"
+##  transformer with 1 layer
+exps_1_layer_trans = [
+    (base_path + "Transformer__12-09_11:27/", "Small"),
+    (base_path + "Transformer__12-09_11:28/", "Medium"),
+    (base_path + "Transformer__12-09_11:30/", "Large"),
+]
+
+base_path = "/media/jonas/archive/master/data/squad/cluster_exp/11_12_19/experiments/"
+##  all exps
+exps_all = [
+    (base_path + "LSTM__12-11_01:34/", "LSTM Large"),
+    (base_path + "LSTM__12-11_01:36/", "LSTM Medium"),
+    (base_path + "LSTM__12-11_01:37/", "LSTM Small"),
+    (base_path + "LSTM_attn__12-11_01:27/", "LSTM Attn Large"),
+    (base_path + "LSTM_attn__12-11_01:29/", "LSTM Attn Medium"),
+    (base_path + "LSTM_attn__12-11_01:31/", "LSTM Attn Small"),
+    (base_path + "Transformer__12-11_01:17/", "Transformer Large"),
+    (base_path + "Transformer__12-11_01:19/", "Transformer Medium"),
+    (base_path + "Transformer__12-11_01:21/", "Transformer Small"),
+]
+
 max_epochs=250
 
 fig = plt.figure()
-st = fig.suptitle("Transformer vs LSTM", fontsize="x-large")
+st = fig.suptitle("Question Generation from BERT embeddings", fontsize="x-large")
 plt_train = fig.add_subplot(121)
-plt_test = fig.add_subplot(122,sharey = plt_train)
+plt_test = fig.add_subplot(122,sharey=plt_train)
 
 
-for exp in exps_attn:
+for exp in exps_all:
 
     exp_path = exp[0]
     train_loss,test_loss = load_results(exp_path)
@@ -72,6 +94,6 @@ for exp in exps_attn:
 
 fig.legend(loc='center right',bbox_to_anchor=(1, 0.5))
 plt.tight_layout(rect=[0,0,0.8,0.95])
-fig.savefig("fig/transformer_test_train.png",bbox_inches = "tight")
+fig.savefig("fig/new_plot.png",bbox_inches = "tight")
 
 plt.show()

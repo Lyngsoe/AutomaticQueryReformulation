@@ -54,12 +54,13 @@ class SquadDataloaderSubwords:
         max_seq_len_y = 0
         max_seq_len_q = 0
         for q in q_batch:
+            q.insert(0, 2)
             seq_len = len(q)
             if seq_len > max_seq_len_q:
                 max_seq_len_q = seq_len
 
         for y in y_batch:
-            #y.insert(0, 2)
+            y.insert(0, 2)
             seq_len = len(y)
             if seq_len > max_seq_len_y:
                 max_seq_len_y = seq_len

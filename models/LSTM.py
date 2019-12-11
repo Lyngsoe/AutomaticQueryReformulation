@@ -63,16 +63,16 @@ class LSTMAutoEncoder:
         decoder_hidden = (torch.stack([encoder_hidden[0][0] for i in range(self.decoder_layers)], dim=0),
                           torch.stack([encoder_hidden[1][0] for i in range(self.decoder_layers)], dim=0))
         decoder_input = target_tensor[:,0].unsqueeze(0).unsqueeze(2).float()
-        for di in range(target_length-1):
+        for di in range(target_length):
             decoder_output, decoder_hidden = self.decoder(decoder_input,decoder_hidden)
             decoder_output2 = torch.zeros_like(decoder_output)
             mask = (y_mask[:, di] == 0)
             decoder_output2.squeeze(0)[mask] = decoder_output.squeeze(0)[mask]
             decoder_output = decoder_output2
-            b_target_tensor = target_tensor[:,di+1]
+            b_target_tensor = target_tensor[:,di]
             pred = self.output(decoder_output).squeeze(0)
             outputs[di] = decoder_output
-            decoder_input = target_tensor[:,di+1].unsqueeze(0).unsqueeze(2).float()
+            decoder_input = target_tensor[:,di].unsqueeze(0).unsqueeze(2).float()
             loss += self.criterion(pred, b_target_tensor)
 
         loss/=target_length
@@ -108,17 +108,17 @@ class LSTMAutoEncoder:
             decoder_hidden = (torch.stack([encoder_hidden[0][0] for i in range(self.decoder_layers)], dim=0),
                               torch.stack([encoder_hidden[1][0] for i in range(self.decoder_layers)], dim=0))
             decoder_input = target_tensor[:,0].unsqueeze(0).unsqueeze(2).float()
-            for di in range(target_length-1):
+            for di in range(target_length):
                 decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
                 decoder_output2 = torch.zeros_like(decoder_output)
                 mask = (y_mask[:, di] == 0)
                 decoder_output2.squeeze(0)[mask] = decoder_output.squeeze(0)[mask]
                 decoder_output = decoder_output2
-                b_target_tensor = target_tensor[:, di+1]
+                b_target_tensor = target_tensor[:, di]
                 pred = self.output(decoder_output).squeeze(0)
                 outputs[di] = decoder_output
 
-                decoder_input = target_tensor[:, di+1].unsqueeze(0).unsqueeze(2).float()
+                decoder_input = target_tensor[:, di].unsqueeze(0).unsqueeze(2).float()
                 loss += self.criterion(pred, b_target_tensor)
 
             loss /= target_length

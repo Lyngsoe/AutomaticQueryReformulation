@@ -7,13 +7,14 @@ class RecallRewardMean:
     def __call__(self,search_results,target,base_reward,length):
         mr = []
         batch_size = len(search_results)
+        rewards = []
         for i in range(batch_size):
             recall = recll_40(search_results[i],target[i]["paragraphs"])
-            reward = recall
-            mr.append(reward)
+            rewards.append(torch.Tensor(length).fill_(recall/length).cuda().double())
+            mr.append(recall)
 
         mr = np.mean(mr)
-        rewards_t = torch.Tensor(length, batch_size).fill_(mr).cuda().double()
+        rewards_t = torch.stack(rewards,dim=1)
         base_reward_t = torch.Tensor(length, batch_size).fill_(base_reward).cuda().double()
         return rewards_t,base_reward_t,mr
 

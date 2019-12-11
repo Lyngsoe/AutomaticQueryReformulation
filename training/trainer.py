@@ -6,6 +6,7 @@ import os
 import jsonlines
 import time
 import json
+import numpy as np
 
 class Trainer:
     def __init__(self,model,base_path,batch_size=8,epoch=0,max_epoch=50,device="gpu",max_seq_len=300,specs=None):
@@ -29,8 +30,8 @@ class Trainer:
         test_loss = 0
         pbar = tqdm(total=5928, desc="evaluating batches for epoch {}".format(self.epoch))
         for eval_x, eval_y,queries,targets,x_mask,y_mask,y_emb in iter(eval_data):
-            eval_x = torch.tensor(eval_x, device=self.device).type(torch.float64).view(-1, eval_x.shape[0], eval_x.shape[2])
-            y_emb = torch.tensor(y_emb, device=self.device).type(torch.double).view(-1, y_emb.shape[0], y_emb.shape[2])
+            eval_x = torch.tensor(np.transpose(eval_x,(1, 0, 2)), device=self.device).type(torch.float64)
+            y_emb = torch.tensor(np.transpose(y_emb,(1, 0, 2)), device=self.device).type(torch.double)
             eval_y = torch.tensor(eval_y, device=self.device).type(torch.long)
             x_mask = torch.tensor(x_mask, device=self.device).type(torch.float64)
             y_mask = torch.tensor(y_mask, device=self.device).type(torch.float64)
@@ -80,8 +81,8 @@ class Trainer:
             total_data_load_time = 0
             start_data_load = time.time()
             for x,y,x_mask,y_mask,y_emb in iter(train_data):
-                x_tensor = torch.tensor(x, device=self.device).type(torch.double).view(-1, x.shape[0], x.shape[2])
-                y_emb = torch.tensor(y_emb, device=self.device).type(torch.double).view(-1, y_emb.shape[0], y_emb.shape[2])
+                x_tensor = torch.tensor(np.transpose(x,(1, 0, 2)), device=self.device).type(torch.double)
+                y_emb = torch.tensor(np.transpose(y_emb,(1, 0, 2)), device=self.device).type(torch.double)
                 y_tensor = torch.tensor(y, device=self.device).type(torch.long)
                 #print(x_mask.shape)
                 x_mask = torch.tensor(x_mask, device=self.device).type(torch.float64)

@@ -15,11 +15,11 @@ emb_size = 1 # embedding dimension
 hidden_size = 256 # the dimension
 dropout = 0.9 # the dropout value
 batch_size = 8
-lr = 0.00001
+lr = 0.001
 epochs = 250
-l2 = 0.5
+l2 = 0
 encoder_layers = 1
-decoder_layers = 2
+decoder_layers = 4
 
 
 specs = {
