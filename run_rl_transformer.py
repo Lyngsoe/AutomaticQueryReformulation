@@ -20,8 +20,8 @@ n_layers = 6 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
 nhead = 8 # the number of heads in the multiheadattention models
 dropout = 0.2 # the dropout value
 dff = d_model*4 # dimension of feed forward
-batch_size = 8
-lr = 0.00001
+batch_size = 16
+lr = 0.001
 epochs = 500
 l2 = 0
 

@@ -60,7 +60,7 @@ class MyTransformer:
 
         output = self.model(lin_in,tgt,tgt_mask=tgt_mask,src_key_padding_mask=x_mask,tgt_key_padding_mask=y_mask)
         output = output.masked_fill(torch.isnan(output), 0)
-        lin_out = self.linear_out(self.drop_out(output))
+        lin_out = self.linear_out(self.drop_out(output))[1:]
 
         preds = lin_out
         #print("preds",preds.size())
@@ -69,7 +69,7 @@ class MyTransformer:
         loss = 0
         for i in range(x.size(1)):
             p = preds[:, i]
-            y_b = y[i]
+            y_b = y[i,1:]
             loss += self.criterion(p,y_b)
 
         loss/=y.size(0)
@@ -84,7 +84,7 @@ class MyTransformer:
 
         with torch.no_grad():
             self.model.eval()
-            max_len = y.size(0)
+            max_len = y_emb.size(0)
 
             m_out = torch.zeros(y_emb.size(0),y_emb.size(1),self.d_mdodel).cuda().double()
 
@@ -109,7 +109,7 @@ class MyTransformer:
                 m_out[i] = out[-1]
 
             m_out = m_out.masked_fill(torch.isnan(m_out), 0)
-            lin_out = self.linear_out(m_out)
+            lin_out = self.linear_out(m_out)[1:]
 
             preds = lin_out
             # print("preds",preds.size())
@@ -118,7 +118,7 @@ class MyTransformer:
             loss = 0
             for i in range(x.size(1)):
                 p = preds[:, i]
-                y_b = y[i]
+                y_b = y[i,1:]
                 loss += self.criterion(p, y_b)
 
             loss /= y.size(0)

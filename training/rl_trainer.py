@@ -20,7 +20,7 @@ class Trainer:
         self.min_test_loss = None
         self.exp_path = model.save_path + model.exp_name
         self.search_engine = search_engine
-        self.base_reward_window_size = 100
+        self.base_reward_window_size = 1000
         self.base_reward = np.zeros(self.base_reward_window_size)
         self.make_dir()
         if specs is not None:
@@ -56,7 +56,7 @@ class Trainer:
                 tqdm.write("prediction: {}".format(predicted_sentence))
                 tqdm.write("loss: {} reward: {}".format(loss,reward))
             i_eval+=1
-            if i_eval > 10:
+            if i_eval > 100:
                 break
 
         test_loss = test_loss/i_eval
@@ -124,15 +124,17 @@ class Trainer:
                 pbar.set_description("training batches for epoch {} with training loss: {:.3f}, normalized reward: {:.6f} reward: {:.6f} base reward {:.6f} train: {:.2f} load: {:.2f}".format(self.epoch, total_loss/train_iter,reward - base_reward,total_rewards/train_iter,base_reward,total_train_time / train_iter, total_data_load_time / train_iter))
                 pbar.update()
                 start_data_load = time.time()
-                if train_iter % 100 == 0:
+                if train_iter % 1000 == 0:
                     [tqdm.write(sentence) for sentence in predicted_sentence[:4]]
-                if train_iter % 100 == 0:
+                if train_iter % 1000 == 0:
                     pbar.close()
-                    #train_loss = total_loss / train_iter
-                    #train_reward = total_rewards / train_iter
-                    #self.evaluate(train_loss,train_reward)
-                    #tqdm.write(predicted_sentence[0])
-                    break
+                    train_loss = total_loss / train_iter
+                    train_reward = total_rewards / train_iter
+                    self.evaluate(train_loss,train_reward,base_reward)
+                    pbar = tqdm(total=int(10031),
+                                desc="training batches for epoch {}".format(self.epoch))
+                    pbar.update(train_iter)
+                    #break
 
             pbar.close()
 
@@ -156,7 +158,7 @@ class Trainer:
         os.makedirs(self.exp_path + "/best", exist_ok=True)
 
     def calc_base_reward(self):
-        br = np.sum(self.base_reward[np.nonzero(self.base_reward)])/self.base_reward_window_size*1.01
+        br = np.sum(self.base_reward[np.nonzero(self.base_reward)])/np.count_nonzero(self.base_reward)
         if np.isnan(br) or br < 0:
             br=0.0001
         return br
