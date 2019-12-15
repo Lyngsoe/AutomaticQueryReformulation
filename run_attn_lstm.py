@@ -12,13 +12,13 @@ base_path = "/media/jonas/archive/master/data/squad/"
 
 vocab_size = 30522
 emb_size = 768 # embedding dimension
-hidden_size = 64 # the dimension
+hidden_size = 512 # the dimension
 dropout = 0.2 # the dropout value
-batch_size = 16
-lr = 0.001
+batch_size = 8
+lr = 0.0001
 epochs = 250
 encoder_layers = 1
-decoder_layers = 1
+decoder_layers = 4
 
 specs = {
     "vocab_size":vocab_size,

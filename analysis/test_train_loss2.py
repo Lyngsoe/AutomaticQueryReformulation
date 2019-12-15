@@ -6,9 +6,13 @@ def load_results(path):
     r = jsonlines.open(path+"results.jsonl")
     train_loss = []
     test_loss = []
+    epoch = -1
     for line in r:
-        train_loss.append(line["train_loss"])
-        test_loss.append(line["test_loss"])
+        e = line["epoch"]
+        if e > epoch:
+            #epoch+=3
+            train_loss.append(line["train_loss"])
+            test_loss.append(line["test_loss"])
 
     return train_loss,test_loss
 
@@ -29,12 +33,12 @@ def create_plot(exp_cur):
 
 
         plt_train.set_title('Train loss')
-        plt_train.set_xlabel('Train iteration')
+        plt_train.set_xlabel('Train Iteration')
         plt_train.set_ylabel('Loss')
 
 
         plt_test.set_title('Test loss')
-        plt_test.set_xlabel('Train iteration')
+        plt_test.set_xlabel('Train Iteration')
         #plt_test.set_ylabel('Loss')
 
 
@@ -49,12 +53,13 @@ def create_plot(exp_cur):
 
 
 plots = [
-    plot_spec.exps_trans,
-    plot_spec.exps_lstm,
-    plot_spec.exps_attn_lstm,
-    plot_spec.exps_trans_subwords,
-    plot_spec.exps_attn_lstm_subwords,
-    plot_spec.exps_lstm_subwords,
+    plot_spec.exps_small_trans_drop
+    #plot_spec.exps_trans,
+    #plot_spec.exps_lstm,
+    #plot_spec.exps_attn_lstm,
+    #plot_spec.exps_trans_subwords,
+    #plot_spec.exps_attn_lstm_subwords,
+    #plot_spec.exps_lstm_subwords,
 ]
 
 for p in plots:

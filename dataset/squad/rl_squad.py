@@ -27,8 +27,6 @@ def read_squad(path):
                     q_id = qa["id"]
 
                     qas_to_write.append({"question":q,"c_id":c_id,"q_id":q_id,"title":title,"paragraphs":para_ids})
-        if len(qas_to_write) > 10000:
-            break
 
     return qas_to_write,paragraphs
 
@@ -48,7 +46,7 @@ info = {}
 
 qas,paragraphs = read_squad(dataset_path)
 info.update({"qas":len(qas)})
-
+random.shuffle(qas)
 i = 0
 new_qas = []
 
@@ -63,10 +61,9 @@ for qa in tqdm(qas,desc="embedding questions"):
     new_qa.update({"question_tokens":q_tokens,"question_emb":[x.tolist() for x in q_emb],"question_token_ids":[int(x) for x in q_token_ids]})
     new_qas.append(new_qa)
 
-    #if len(new_qas) > 10000:
-        #random.shuffle(new_qas)
-        #write_batch(qa_writer,new_qas)
-        #new_qas = []
+    if len(new_qas) > 1000:
+        write_batch(qa_writer, new_qas)
+        new_qas = []
 
 random.shuffle(new_qas)
 write_batch(qa_writer,new_qas)
@@ -78,6 +75,7 @@ qas_eval,para_eval = read_squad(dataset_path_eval)
 paragraphs.extend(para_eval)
 
 para_writer = jsonlines.open(base_path+"paragraphs.jsonl",'w',flush=True)
+random.shuffle(qas)
 write_batch(para_writer,paragraphs)
 paragraphs = []
 
@@ -93,10 +91,9 @@ for qa in tqdm(qas_eval,desc="embedding questions in eval"):
                    "question_token_ids": [int(x) for x in q_token_ids]})
     new_qas.append(new_qa)
 
-    # if len(new_qas) > 10000:
-    # random.shuffle(new_qas)
-    # write_batch(qa_writer,new_qas)
-    # new_qas = []
+    if len(new_qas) > 1000:
+        write_batch(qa_writer_eval, new_qas)
+        new_qas = []
 
 random.shuffle(new_qas)
 write_batch(qa_writer_eval,new_qas)

@@ -20,8 +20,8 @@ n_layers = 6 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
 nhead = 8 # the number of heads in the multiheadattention models
 dropout = 0.2 # the dropout value
 dff = d_model*4 # dimension of feed forward
-batch_size = 16
-lr = 0.001
+batch_size = 8
+lr = 10e-7
 epochs = 500
 l2 = 0
 
@@ -44,10 +44,10 @@ reward_function = RecallRewardMean()
 #reward_function = RecallRewardMean()
 search_engine = ELSearch("squad")
 
-load = False
+load = True
 
 if load:
-    load_path = "/media/jonas/archive/master/data/squad/experiments/Transformer__12-07_23:48"
+    load_path = "/media/jonas/archive/master/data/squad/cluster_exp/12_12_19/experiments/Transformer__12-12_17:01/"
     model = RLTransformer(base_path, reward_function, input_size=emb_size,num_layers=n_layers, output_size=vocab_size, device=device,nhead=nhead, dropout=dropout, d_model=d_model, dff=dff, lr=lr,l2=l2)
     epoch = model.load(load_path +"/latest",train=True)
     epoch=0

@@ -43,9 +43,9 @@ base_path = "/media/jonas/archive/master/data/squad/cluster_exp/12_12_19/experim
 ##  all exps
 exps_trans = [
     "Question Generation by Transformer with BERT embeddings",
-    (base_path + "Transformer__12-12_08:59/", "Transformer Large"),
-    (base_path + "Transformer__12-12_09:00/", "Transformer Medium"),
-    (base_path + "Transformer__12-12_09:01/", "Transformer Small"),
+    (base_path + "Transformer__12-12_16:59/", "Transformer Large"),
+    (base_path + "Transformer__12-12_17:00/", "Transformer Medium"),
+    (base_path + "Transformer__12-12_17:01/", "Transformer Small"),
 ]
 base_path = "/media/jonas/archive/master/data/squad/cluster_exp/12_12_19/experiments/"
 ##  all exps
@@ -65,16 +65,16 @@ exps_attn_lstm = [
 ]
 
 
-base_path = "/media/jonas/archive/master/data/squad2/cluster_exp/12_12_19/"
+base_path = "/media/jonas/archive/master/data/squad2/cluster_exp/12_12_19/experiments/"
 ##  all exps
 exps_trans_subwords = [
     "Question Generation by Transformer with Wordpiece indices",
-    (base_path + "Transformer__12-12_09:06/", "Transformer Large"),
-    (base_path + "Transformer__12-12_09:07/", "Transformer Medium"),
-    (base_path + "Transformer__12-12_09:08/", "Transformer Small"),
+    (base_path + "Transformer__12-12_16:54/", "Transformer Large"),
+    (base_path + "Transformer__12-12_16:55/", "Transformer Medium"),
+    (base_path + "Transformer__12-12_16:56/", "Transformer Small"),
 ]
 
-base_path = "/media/jonas/archive/master/data/squad2/cluster_exp/12_12_19/"
+base_path = "/media/jonas/archive/master/data/squad2/cluster_exp/12_12_19/experiments/"
 ##  all exps
 exps_lstm_subwords = [
     "Question Generation by LSTM with Wordpiece indices",
@@ -83,11 +83,11 @@ exps_lstm_subwords = [
     (base_path + "LSTM__12-11_13:28/", "LSTM Small"),
 ]
 
-base_path = "/media/jonas/archive/master/data/squad2/cluster_exp/12_12_19/"
+base_path = "/media/jonas/archive/master/data/squad2/cluster_exp/12_12_19/experiments/"
 ##  all exps
 exps_attn_lstm_subwords = [
     "Question Generation by LSTM Attention with Wordpiece indices",
-    (base_path + "LSTM_attn__12-11_13:32/", "LSTM Attn Large"),
+    #(base_path + "LSTM_attn__12-11_13:32/", "LSTM Attn Large"),
     (base_path + "LSTM_attn__12-11_13:34/", "LSTM Attn Medium"),
     (base_path + "LSTM_attn__12-11_13:39/", "LSTM Attn Small"),
 ]
@@ -122,5 +122,15 @@ exps_all_subwords = [
     (base_path + "Transformer__12-12_09:06/", "Transformer Large"),
     (base_path + "Transformer__12-12_09:07/", "Transformer Medium"),
     (base_path + "Transformer__12-12_09:08/", "Transformer Small"),
+]
+
+
+base_path = "/media/jonas/archive/master/data/squad/cluster_exp/15_12_19/experiments/"
+##  all exps
+exps_small_trans_drop = [
+    "Transformer small",
+    (base_path + "Transformer__12-15_16:42/", "0.3 dropout"),
+    (base_path + "Transformer__12-15_16:43/", "0.4 dropout"),
+    (base_path + "Transformer__12-15_16:44/", "0.5 dropout"),
 ]
 

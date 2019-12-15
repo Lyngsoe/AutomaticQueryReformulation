@@ -97,7 +97,7 @@ class TrainerSubwords:
                 batch_loss,predictions = self.model.train(x_tensor, y_tensor,x_mask,y_mask,y__emb)
                 total_train_time += time.time() - start_train
                 mbl += batch_loss
-                pbar.set_description("training batches for epoch {} with training loss: {:.6f} train: {:.2f} load: {:.2f}".format(self.epoch, mbl/train_iter ,total_train_time / train_iter, total_data_load_time / train_iter))
+                pbar.set_description("training batches for epoch {} with training loss: {:.6f} train: {:.2f} load: {:.2f}".format(self.epoch, mbl/temp_train_iter ,total_train_time / train_iter, total_data_load_time / train_iter))
                 pbar.update()
                 start_data_load = time.time()
                 if train_iter % int(((86821 / self.batch_size)/10)) == 0:
@@ -111,6 +111,7 @@ class TrainerSubwords:
                     pbar = tqdm(total=int(86821 / self.batch_size),desc="training batches for epoch {}".format(self.epoch))
                     pbar.update(train_iter)
                     mbl = 0
+                    temp_train_iter = 0
                     #break
 
             pbar.close()

@@ -18,11 +18,9 @@ class LSTMAutoEncoder:
         self.exp_name = exp_name if exp_name is not None else self.get_exp_name()
 
         self.encoder = EncoderLSTM(word_emb_size, hidden_size,encoder_layers,dropout=dropout).to(self.device)
-        self.decoder = DecoderLSTM(1,hidden_size,decoder_layers,dropout=dropout).to(self.device)
+        self.decoder = DecoderLSTM(1,hidden_size,vocab_size,decoder_layers,dropout=dropout).to(self.device)
 
-        self.output = Linear(hidden_size, vocab_size).to(self.device).to(self.device)
-
-        parameters = list(self.encoder.parameters()) + list(self.decoder.parameters()) + list(self.output.parameters())
+        parameters = list(self.encoder.parameters()) + list(self.decoder.parameters())
 
         #self.optimizer = optim.SGD(parameters, lr=lr)
         self.optimizer = optim.Adam(parameters, lr=lr,weight_decay=l2)
@@ -31,10 +29,11 @@ class LSTMAutoEncoder:
         classW[1] = 0
 
         self.criterion = nn.CrossEntropyLoss(weight=classW)
-        parameters = list(self.encoder.parameters()) + list(self.decoder.parameters()) + list(self.output.parameters())
+        parameters = list(self.encoder.parameters()) + list(self.decoder.parameters())
         self.decoder_layers = decoder_layers
         print("#parameters:", sum([np.prod(p.size()) for p in parameters]))
         self.hidden_size = hidden_size
+        self.vocab_size = vocab_size
 
     def train(self,input_tensor, target_tensor, x_mask, y_mask,y_emb):
         #print("x_in:",input_tensor.size())
@@ -49,7 +48,6 @@ class LSTMAutoEncoder:
         #print("enc hidden:",encoder_hidden.size())
         self.encoder.train()
         self.decoder.train()
-        self.output.train()
         self.optimizer.zero_grad()
 
         encoder_outputs = torch.zeros(input_length,batch_size, self.encoder.hidden_size, device=self.device)
@@ -64,12 +62,12 @@ class LSTMAutoEncoder:
             mask = x_mask[:,ei] == 0
             encoder_outputs[ei][mask] = encoder_output[0][mask]
 
-        outputs = torch.zeros(target_length,batch_size, self.hidden_size, device=self.device)
+        outputs = torch.zeros(target_length,batch_size, self.vocab_size, device=self.device)
         decoder_hidden = (torch.stack([encoder_hidden[0][0] for i in range(self.decoder_layers)],dim=0),
                           torch.stack([encoder_hidden[1][0] for i in range(self.decoder_layers)],dim=0))
 
         decoder_input = target_tensor[:,0].unsqueeze(0).unsqueeze(2).float()
-        for di in range(target_length):
+        for di in range(1,target_length):
             decoder_output, decoder_hidden = self.decoder(decoder_input,decoder_hidden,encoder_outputs)
             decoder_output2 = torch.zeros_like(decoder_output)
             mask = (y_mask[:, di] == 0)
@@ -77,13 +75,14 @@ class LSTMAutoEncoder:
             decoder_output = decoder_output2
 
             b_target_tensor = target_tensor[:, di]
-            pred = self.output(decoder_output).squeeze(0)
+            pred = decoder_output.squeeze(0)
             outputs[di] = decoder_output
+
             decoder_input = target_tensor[:, di].unsqueeze(0).unsqueeze(2).float()
             loss += self.criterion(pred, b_target_tensor)
 
         loss /= target_length
-        preds = self.output(outputs)
+        preds = outputs[1:]
         loss.backward()
         self.optimizer.step()
 
@@ -115,12 +114,12 @@ class LSTMAutoEncoder:
                 mask = x_mask[:, ei] == 0
                 encoder_outputs[ei][mask] = encoder_output[0][mask]
 
-            outputs = torch.zeros(target_length, batch_size, self.hidden_size, device=self.device)
+            outputs = torch.zeros(target_length, batch_size, self.vocab_size, device=self.device)
             decoder_hidden = (torch.stack([encoder_hidden[0][0] for i in range(self.decoder_layers)], dim=0),
                               torch.stack([encoder_hidden[1][0] for i in range(self.decoder_layers)], dim=0))
 
             decoder_input = target_tensor[:, 0].unsqueeze(0).unsqueeze(2).float()
-            for di in range(target_length):
+            for di in range(1,target_length):
                 decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden, encoder_outputs)
                 decoder_output2 = torch.zeros_like(decoder_output)
                 mask = (y_mask[:, di] == 0)
@@ -128,13 +127,13 @@ class LSTMAutoEncoder:
                 decoder_output = decoder_output2
 
                 b_target_tensor = target_tensor[:, di]
-                pred = self.output(decoder_output).squeeze(0)
+                pred = decoder_output.squeeze(0)
                 outputs[di] = decoder_output
                 decoder_input = target_tensor[:, di].unsqueeze(0).unsqueeze(2).float()
                 loss += self.criterion(pred, b_target_tensor)
 
             loss /= target_length
-            preds = self.output(outputs)
+            preds = outputs[1:]
 
         return loss.item(), preds.cpu().numpy()
 
@@ -162,11 +161,6 @@ class LSTMAutoEncoder:
             'model_state_dict': self.decoder.state_dict()
             }, save_path+"/decoder.pt")
 
-        torch.save({
-            'epoch': epoch,
-            'model_state_dict': self.output.state_dict()
-        }, save_path + "/output.pt")
-
 
     def load(self,save_path,train):
 
@@ -185,10 +179,7 @@ class LSTMAutoEncoder:
         if train:
             self.encoder.train()
             self.decoder.train()
-            self.output.train()
         else:
             self.encoder.eval()
             self.decoder.eval()
-            self.output.eval()
-
         return epoch

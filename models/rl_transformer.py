@@ -48,9 +48,11 @@ class RLTransformer:
         self.linear_out.train()
         self.linear_in.train()
         self.optimizer.zero_grad()
-        max_len = x.size(0)
+        max_len = 20
 
+        sos_token = torch.Tensor(x.size(1), x.size(2)).fill_(0.1).cuda().double()
         m_out = self.linear_in(x[0]).unsqueeze(0)
+
         lin_in = self.linear_in(x)
 
         q_mask = q_mask == 1
@@ -77,9 +79,9 @@ class RLTransformer:
         self.linear_out.eval()
         self.linear_in.eval()
 
-        max_len = x.size(0)
+        max_len = 20
         sos_token = torch.Tensor(x.size(1), x.size(2)).fill_(0.1).cuda().double()
-        m_out = self.linear_in(sos_token).unsqueeze(0)
+        m_out = self.linear_in(x[0]).unsqueeze(0)
 
         lin_in = self.linear_in(x)
 

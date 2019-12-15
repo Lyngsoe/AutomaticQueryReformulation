@@ -16,14 +16,14 @@ base_path = "/media/jonas/archive/master/data/rl_squad/"
 
 vocab_size = 30522
 emb_size = 768 # embedding dimension
-hidden_size = 768 # the dimension
-dropout = 0.8 # the dropout value
-batch_size = 64
-lr = 0.000001
-epochs = 250
-encoder_layers = 2
-decoder_layers = 2
-l2 = 0.9
+hidden_size = 256 # the dimension
+dropout = 0.2 # the dropout value
+batch_size = 8
+lr = 10e-7
+epochs = 500
+encoder_layers = 1
+decoder_layers = 4
+l2 = 0
 
 reward_function = RecallRewardMean()
 search_engine = ELSearch("squad")
@@ -43,9 +43,10 @@ specs = {
 load = False
 
 if load:
-    load_path = "/media/jonas/archive/master/data/squad/experiments/LSTM__12-09_10:59"
+    load_path = "/media/jonas/archive/master/data/squad/cluster_exp/12_12_19/experiments/LSTM__12-11_01:37/"
     model = LSTMAutoEncoder(base_path,reward_function, word_emb_size=emb_size, vocab_size=vocab_size, device=device,dropout=dropout, hidden_size=hidden_size,decoder_layers=decoder_layers,encoder_layers=encoder_layers, lr=lr,l2=l2)
     epoch = model.load(load_path  + "/latest/", train=False)
+    specs.update({"load_model":load_path})
     trainer = Trainer(model=model,search_engine=search_engine,base_path=base_path,batch_size=batch_size,device=device,epoch=epoch,max_epoch=epochs,specs=specs)
 else:
     model = LSTMAutoEncoder(base_path,reward_function, word_emb_size=emb_size, vocab_size=vocab_size, device=device,dropout=dropout,decoder_layers=decoder_layers,encoder_layers=encoder_layers, hidden_size=hidden_size, lr=lr,l2=l2)

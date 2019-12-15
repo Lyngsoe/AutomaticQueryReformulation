@@ -1,14 +1,16 @@
 import torch
 import torch.nn as nn
 from torch.nn.modules.transformer import TransformerEncoderLayer,TransformerDecoderLayer
-from models.modules.transformer_encoder import MyTransformerEncoder
-from models.modules.transformer_decoder import MyTransformerDecoder
-from models.modules.transformer import Transformer
+#from models.modules.transformer_encoder import MyTransformerEncoder
+from torch.nn.modules.transformer import Transformer,TransformerDecoder,TransformerEncoder
+#from models.modules.transformer_decoder import MyTransformerDecoder
+#from models.modules.transformer import Transformer
 from torch.nn.modules import Linear
 from torch.nn.modules.normalization import LayerNorm
 from torch.nn import Dropout
 import numpy as np
 from datetime import datetime
+import math
 
 class MyTransformer:
 
@@ -21,16 +23,15 @@ class MyTransformer:
         self.exp_name = exp_name if exp_name is not None else self.get_exp_name()
 
         self.linear_in = Linear(input_size,d_model).cuda().double()
-        self.drop_in = Dropout(dropout)
-        encoder_layer = TransformerEncoderLayer(d_model=d_model,nhead=nhead,dim_feedforward=dff,dropout=dropout)
-        self.encoder = MyTransformerEncoder(encoder_layer, num_layers,norm=LayerNorm(d_model))
+        #encoder_layer = TransformerEncoderLayer(d_model=d_model,nhead=nhead,dim_feedforward=dff,dropout=dropout)
+        #self.encoder = MyTransformerEncoder(encoder_layer, num_layers,norm=LayerNorm(d_model))
 
-        decoder_layer = TransformerDecoderLayer(d_model=d_model,nhead=nhead,dim_feedforward=dff,dropout=dropout)
-        self.decoder = MyTransformerDecoder(decoder_layer, num_layers,norm=LayerNorm(d_model))
+        #decoder_layer = TransformerDecoderLayer(d_model=d_model,nhead=nhead,dim_feedforward=dff,dropout=dropout)
+        #self.decoder = MyTransformerDecoder(decoder_layer, num_layers,norm=LayerNorm(d_model))
 
-        self.model = Transformer(d_model=input_size,nhead=nhead,custom_encoder=self.encoder,custom_decoder=self.decoder)
+        self.model = Transformer(d_model=d_model,nhead=nhead,num_decoder_layers=num_layers,num_encoder_layers=num_layers,dim_feedforward=dff,dropout=dropout)
         self.linear_out = Linear(d_model,output_size).cuda().double()
-        self.drop_out = Dropout(dropout)
+        self.pos_enc = PositionalEncoding(d_model,dropout).cuda().double()
         self.vocab_size = output_size
         classW = torch.ones(output_size, device=self.device).double()
         classW[1] = 0
@@ -52,15 +53,20 @@ class MyTransformer:
 
         mask = (torch.triu(torch.ones(y_emb.size(0),y_emb.size(0))) == 1).transpose(0, 1).float()
         tgt_mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
+        mask = (torch.triu(torch.ones(x.size(0), x.size(0))) == 1).transpose(0, 1).float()
+        src_mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
         x_mask = x_mask == 1
         y_mask = y_mask == 1
-        lin_in = self.linear_in(self.drop_in(x))
+        lin_in = self.linear_in(x)
+        lin_in = self.pos_enc(lin_in)
         #y[0] = sos_token
         tgt = self.linear_in(y_emb)
+        tgt = self.pos_enc(tgt)
 
-        output = self.model(lin_in,tgt,tgt_mask=tgt_mask,src_key_padding_mask=x_mask,tgt_key_padding_mask=y_mask)
+
+        output = self.model(lin_in,tgt,src_mask=src_mask,tgt_mask=tgt_mask,src_key_padding_mask=x_mask,tgt_key_padding_mask=y_mask)
         output = output.masked_fill(torch.isnan(output), 0)
-        lin_out = self.linear_out(self.drop_out(output))[1:]
+        lin_out = self.linear_out(output)[:-1]
 
         preds = lin_out
         #print("preds",preds.size())
@@ -93,6 +99,7 @@ class MyTransformer:
             #print(y.size())
             #m_out[0] = self.linear_in(x[0])
             lin_in = self.linear_in(x)
+            lin_in = self.pos_enc(lin_in)
             x_mask = x_mask == 1
             y_mask = y_mask == 1
             #cat = torch.ones(1, m_out.size(1), m_out.size(2)).cuda().double()
@@ -100,17 +107,21 @@ class MyTransformer:
             for i in range(1, max_len):
 
                 mask = (torch.triu(torch.ones(i,i)) == 1).transpose(0, 1).float()
-                mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
+                tgt_mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
+                mask = (torch.triu(torch.ones(x.size(0), x.size(0))) == 1).transpose(0, 1).float()
+                src_mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
                 #print(y_mask.size())
                 #print(y_mask[:, :i].size())
-                out = self.model(lin_in, m_out[:i], tgt_mask=mask,src_key_padding_mask=x_mask,tgt_key_padding_mask=y_mask[:,:i])
-
+                out = self.model(lin_in,self.pos_enc(m_out[:i]),src_mask=src_mask, tgt_mask=tgt_mask,src_key_padding_mask=x_mask,tgt_key_padding_mask=y_mask[:,:i])
+                #print(torch.argmax(out,dim=2))
                 #m_out = torch.cat((m_out, cat))
                 m_out[i] = out[-1]
 
             m_out = m_out.masked_fill(torch.isnan(m_out), 0)
             lin_out = self.linear_out(m_out)[1:]
 
+            #print(torch.argmax(m_out,dim=2))
+            #print(torch.argmax(out, dim=2))
             preds = lin_out
             # print("preds",preds.size())
 
@@ -179,3 +190,21 @@ class MyTransformer:
             self.linear_out.eval()
 
         return epoch
+
+class PositionalEncoding(nn.Module):
+
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        x = x + self.pe[:x.size(0), :]
+        return self.dropout(x)
