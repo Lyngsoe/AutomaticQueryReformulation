@@ -12,18 +12,20 @@ base_path = "/media/jonas/archive/master/data/squad/"
 
 vocab_size = 30522
 emb_size = 768 # embedding dimension
-hidden_size = 512 # the dimension
+hidden_size_enc = 512 # the dimension
+hidden_size_dec = 2048
 dropout = 0.2 # the dropout value
-batch_size = 4
-lr = 0.001
+batch_size = 16
+lr = 0.00001
 epochs = 250
-encoder_layers = 1
-decoder_layers = 4
+encoder_layers = 5
+decoder_layers = 1
 
 specs = {
     "vocab_size":vocab_size,
     "emb_size":emb_size,
-    "hidden_size": hidden_size,
+    "hidden_size_enc": hidden_size_enc,
+    "hidden_size_dec": hidden_size_dec,
     "dropout": dropout,
     "lr": lr,
     "epochs": epochs,
@@ -31,15 +33,15 @@ specs = {
     "encoder_layers":encoder_layers
 }
 
-load = False
+load = True
 
 if load:
-    load_path = "/media/jonas/archive/master/data/squad/experiments/LSTM__12-11_01:36/"
-    model = LSTMAutoEncoder(base_path, word_emb_size=emb_size, vocab_size=vocab_size, device=device,dropout=dropout, hidden_size=hidden_size,decoder_layers=decoder_layers,encoder_layers=encoder_layers, lr=lr)
+    load_path = "/media/jonas/archive/master/data/squad/experiments/LSTM__12-16_18:42/"
+    model = LSTMAutoEncoder(base_path, word_emb_size=emb_size, vocab_size=vocab_size, device=device,dropout=dropout, hidden_size_enc=hidden_size_enc,hidden_size_dec=hidden_size_dec,decoder_layers=decoder_layers,encoder_layers=encoder_layers, lr=lr)
     epoch = model.load(load_path  + "/latest/", train=False)
     trainer = Trainer(model=model, base_path=base_path, batch_size=batch_size, device=device, epoch=epoch,max_epoch=epochs,specs=specs)
 else:
-    model = LSTMAutoEncoder(base_path, word_emb_size=emb_size, vocab_size=vocab_size, device=device,dropout=dropout,decoder_layers=decoder_layers,encoder_layers=encoder_layers, hidden_size=hidden_size, lr=lr)
+    model = LSTMAutoEncoder(base_path, word_emb_size=emb_size, vocab_size=vocab_size, device=device,dropout=dropout,decoder_layers=decoder_layers,encoder_layers=encoder_layers, hidden_size_enc=hidden_size_enc,hidden_size_dec=hidden_size_dec, lr=lr)
     trainer = Trainer(model=model, base_path=base_path, batch_size=batch_size, max_epoch=epochs, device=device,specs=specs)
 
 
