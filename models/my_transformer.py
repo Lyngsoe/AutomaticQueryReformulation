@@ -33,11 +33,12 @@ class MyTransformer:
         self.linear_out = Linear(d_model,output_size).cuda().double()
         self.pos_enc = PositionalEncoding(d_model,dropout).cuda().double()
         self.vocab_size = output_size
+        self.target_in = nn.Embedding(output_size,d_model,padding_idx=1).cuda().double()
         classW = torch.ones(output_size, device=self.device).double()
         classW[1] = 0
         self.criterion = nn.CrossEntropyLoss(weight=classW)
         self.lr = lr  # learning rate
-        params = list(self.linear_in.parameters()) + list(self.model.parameters()) + list(self.linear_out.parameters())
+        params = list(self.linear_in.parameters()) + list(self.model.parameters()) + list(self.linear_out.parameters()) + list(self.target_in.parameters())
         self.optimizer = torch.optim.Adam(params, lr=self.lr,weight_decay=l2)
         #self.optimizer = torch.optim.SGD(params, lr=self.lr, weight_decay=l2)
         self.model.cuda()
@@ -60,11 +61,10 @@ class MyTransformer:
         lin_in = self.linear_in(x)
         lin_in = self.pos_enc(lin_in)
         #y[0] = sos_token
-        tgt = self.linear_in(y_emb)
+        tgt = self.target_in(y.view(y.size(1),y.size(0)))
         tgt = self.pos_enc(tgt)
 
-
-        output = self.model(lin_in,tgt,src_mask=src_mask,tgt_mask=tgt_mask,src_key_padding_mask=x_mask,tgt_key_padding_mask=y_mask)
+        output = self.model(lin_in,tgt,tgt_mask=tgt_mask,src_key_padding_mask=x_mask,tgt_key_padding_mask=y_mask)
         output = output.masked_fill(torch.isnan(output), 0)
         lin_out = self.linear_out(output)[:-1]
 
@@ -92,10 +92,10 @@ class MyTransformer:
             self.model.eval()
             max_len = y_emb.size(0)
 
-            m_out = torch.zeros(y_emb.size(0),y_emb.size(1),self.d_mdodel).cuda().double()
+            m_out = torch.zeros(max_len,x.size(1)).cuda().long()
+            m_out[0] = torch.Tensor(x.size(1),1).fill_(2).cuda().long()
 
-
-            m_out[0] = self.linear_in(y_emb[0])
+            #m_out[0] = self.linear_in(y_emb[0])
             #print(y.size())
             #m_out[0] = self.linear_in(x[0])
             lin_in = self.linear_in(x)
@@ -104,21 +104,19 @@ class MyTransformer:
             y_mask = y_mask == 1
             #cat = torch.ones(1, m_out.size(1), m_out.size(2)).cuda().double()
             #m_out = torch.cat((m_out, cat))
+
             for i in range(1, max_len):
 
                 mask = (torch.triu(torch.ones(i,i)) == 1).transpose(0, 1).float()
                 tgt_mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
-                mask = (torch.triu(torch.ones(x.size(0), x.size(0))) == 1).transpose(0, 1).float()
-                src_mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
                 #print(y_mask.size())
-                #print(y_mask[:, :i].size())
-                out = self.model(lin_in,self.pos_enc(m_out[:i]),src_mask=src_mask, tgt_mask=tgt_mask,src_key_padding_mask=x_mask,tgt_key_padding_mask=y_mask[:,:i])
+                tgt_in = self.pos_enc(self.target_in(m_out[:i]))
+                out = self.model(lin_in,tgt_in, tgt_mask=tgt_mask,src_key_padding_mask=x_mask,tgt_key_padding_mask=y_mask[:,:i])
                 #print(torch.argmax(out,dim=2))
                 #m_out = torch.cat((m_out, cat))
-                m_out[i] = out[-1]
+                m_out[i] = torch.argmax(self.linear_out(out[-1]))
 
-            m_out = m_out.masked_fill(torch.isnan(m_out), 0)
-            lin_out = self.linear_out(m_out)[1:]
+            lin_out = self.linear_out(out)
 
             #print(torch.argmax(m_out,dim=2))
             #print(torch.argmax(out, dim=2))
