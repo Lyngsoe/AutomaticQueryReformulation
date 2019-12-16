@@ -19,10 +19,10 @@ class LSTMAutoEncoder:
 
         self.encoder = EncoderLSTM(word_emb_size, hidden_size,encoder_layers,dropout=dropout).to(self.device)
         self.decoder = DecoderLSTM(1,hidden_size,vocab_size,decoder_layers,dropout=dropout).to(self.device)
+        self.lin_latent = Linear(2*hidden_size,hidden_size).to(self.device)
 
 
-
-        parameters = list(self.encoder.parameters()) + list(self.decoder.parameters())
+        parameters = list(self.encoder.parameters()) + list(self.decoder.parameters()) + list(self.lin_latent.parameters())
 
         #self.optimizer = optim.SGD(parameters, lr=lr)
         self.optimizer = optim.Adam(parameters, lr=lr,weight_decay=l2)
@@ -31,7 +31,7 @@ class LSTMAutoEncoder:
         classW[1] = 0
 
         self.criterion = nn.CrossEntropyLoss(weight=classW)
-        parameters = list(self.encoder.parameters()) + list(self.decoder.parameters())
+        parameters = list(self.encoder.parameters()) + list(self.decoder.parameters()) + list(self.lin_latent.parameters())
         self.decoder_layers = decoder_layers
         self.hidden_size = hidden_size
         self.vocab_size = vocab_size
@@ -60,8 +60,8 @@ class LSTMAutoEncoder:
             encoder_output, encoder_hidden = self.encoder(encoder_in.unsqueeze(0))
 
         outputs = torch.zeros(target_length,batch_size, self.vocab_size, device=self.device)
-        decoder_hidden = (torch.stack([encoder_hidden[0][0] for i in range(self.decoder_layers)], dim=0),
-                          torch.stack([encoder_hidden[1][0] for i in range(self.decoder_layers)], dim=0))
+        decoder_hidden = (torch.stack([self.lin_latent(encoder_output[0]) for i in range(self.decoder_layers)], dim=0),
+                          torch.stack([self.lin_latent(encoder_output[0]) for i in range(self.decoder_layers)], dim=0))
         decoder_input = target_tensor[:,0].unsqueeze(0).unsqueeze(2).float()
         for di in range(1,target_length):
             decoder_output, decoder_hidden = self.decoder(decoder_input,decoder_hidden)
@@ -105,8 +105,9 @@ class LSTMAutoEncoder:
                 encoder_output, encoder_hidden = self.encoder(encoder_in.unsqueeze(0))
 
             outputs = torch.zeros(target_length, batch_size, self.vocab_size, device=self.device)
-            decoder_hidden = (torch.stack([encoder_hidden[0][0] for i in range(self.decoder_layers)], dim=0),
-                              torch.stack([encoder_hidden[1][0] for i in range(self.decoder_layers)], dim=0))
+            decoder_hidden = (
+            torch.stack([self.lin_latent(encoder_output[0]) for i in range(self.decoder_layers)], dim=0),
+            torch.stack([self.lin_latent(encoder_output[0]) for i in range(self.decoder_layers)], dim=0))
             decoder_input = target_tensor[:,0].unsqueeze(0).unsqueeze(2).float()
             for di in range(1,target_length):
                 decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
@@ -118,7 +119,7 @@ class LSTMAutoEncoder:
                 pred = decoder_output.squeeze(0)
                 outputs[di] = decoder_output
 
-                decoder_input = target_tensor[:, di].unsqueeze(0).unsqueeze(2).float()
+                decoder_input = torch.argmax(pred,dim=1).unsqueeze(0).unsqueeze(2).float()
                 loss += self.criterion(pred, b_target_tensor)
 
             loss /= (target_length-1)

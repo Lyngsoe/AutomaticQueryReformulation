@@ -8,12 +8,12 @@ class DecoderLSTM(nn.Module):
         self.hidden_size = hidden_size
         self.lstm = nn.LSTM(self.hidden_size, self.hidden_size,num_layers=layers,dropout=dropout)
         self.lin_out = nn.Linear(hidden_size, output_size)
-        self.lin_in = nn.Linear(input_size, hidden_size)
+        self.lin_in = nn.Embedding(output_size, hidden_size,padding_idx=2)
         self.drops = nn.Dropout(dropout)
         self.softmax = nn.LogSoftmax(dim=2)
 
     def forward(self, input,hidden):
-        input = self.lin_in(input)
+        input = self.lin_in(input.squeeze(2).long())
         input = self.drops(input)
         input = F.relu(input)
         output, hidden = self.lstm(input,hidden)
