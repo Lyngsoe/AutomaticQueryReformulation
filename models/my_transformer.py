@@ -164,6 +164,11 @@ class MyTransformer:
             'model_state_dict': self.linear_out.state_dict(),
         }, save_path + "/linear_out.pt")
 
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': self.target_in.state_dict(),
+        }, save_path + "/target_in.pt")
+
 
     def load(self,save_path,train):
 
@@ -177,6 +182,9 @@ class MyTransformer:
 
         checkpoint = torch.load(save_path + "/linear_out.pt")
         self.linear_out.load_state_dict(checkpoint["model_state_dict"])
+
+        checkpoint = torch.load(save_path + "/target_in.pt")
+        self.target_in.load_state_dict(checkpoint["model_state_dict"])
 
         if train:
             self.model.train()
