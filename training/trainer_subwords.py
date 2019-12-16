@@ -30,7 +30,7 @@ class TrainerSubwords:
         test_loss = 0
         pbar = tqdm(total=5928, desc="evaluating batches for epoch {}".format(self.epoch))
         for eval_x, y,queries,targets,x_mask,y_mask in iter(eval_data):
-            eval_x = torch.tensor(eval_x, device=self.device).type(torch.float64).view(-1, eval_x.shape[0]).unsqueeze(2)
+            eval_x = torch.tensor(eval_x, device=self.device).type(torch.long).view(-1, eval_x.shape[0]).unsqueeze(2)
             eval_y = torch.tensor(y, device=self.device).type(torch.long)
             y__emb = torch.tensor(np.transpose(y), device=self.device).type(torch.double).unsqueeze(2)
             x_mask = torch.tensor(x_mask, device=self.device).type(torch.float64)
@@ -85,7 +85,7 @@ class TrainerSubwords:
             total_data_load_time = 0
             start_data_load = time.time()
             for x,y,x_mask,y_mask in iter(train_data):
-                x_tensor = torch.tensor(x, device=self.device).type(torch.double).view(-1, x.shape[0]).unsqueeze(2)
+                x_tensor = torch.tensor(x, device=self.device).type(torch.long).view(-1, x.shape[0]).unsqueeze(2)
                 y_tensor = torch.tensor(y, device=self.device).type(torch.long)
                 y__emb = torch.tensor(np.transpose(y), device=self.device).type(torch.double).unsqueeze(2)
                 x_mask = torch.tensor(x_mask, device=self.device).type(torch.float64)
