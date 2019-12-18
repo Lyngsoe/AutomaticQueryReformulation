@@ -2,6 +2,7 @@ from training.rl_trainer import Trainer
 from models.rl_transformer import RLTransformer
 from models.losses.recall_reward import RecallRewardMean
 from models.losses.rank_loss import RankReward
+from models.baselines.moving_avg import MovingAverage,MovingStdAverage
 from search_engine.elastic_search import ELSearch
 import torch
 
@@ -15,15 +16,19 @@ base_path = "/media/jonas/archive/master/data/rl_squad/"
 
 vocab_size = 30522
 emb_size = 768 # embedding dimension
-d_model = 128 # the dimension of the feedforward network model in nn.TransformerEncoder
+d_model = 256 # the dimension of the feedforward network model in nn.TransformerEncoder
 n_layers = 6 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
 nhead = 8 # the number of heads in the multiheadattention models
 dropout = 0.2 # the dropout value
 dff = d_model*4 # dimension of feed forward
-batch_size = 8
+batch_size = 64
 lr = 10e-7
 epochs = 500
 l2 = 0
+
+#base_line = MovingAverage(0.42499358759755385)
+base_line = MovingStdAverage()
+reward_function = RecallRewardMean(base_line)
 
 specs = {
     "vocab_size":vocab_size,
@@ -36,18 +41,19 @@ specs = {
     "lr": lr,
     "l2": l2,
     "epochs": epochs,
+    "base_line":base_line.name,
+    "reward_function":reward_function.name
 }
 
 
 
-reward_function = RecallRewardMean()
-#reward_function = RecallRewardMean()
+
 search_engine = ELSearch("squad")
 
 load = True
 
 if load:
-    load_path = "/media/jonas/archive/master/data/squad/cluster_exp/12_12_19/experiments/Transformer__12-12_17:01/"
+    load_path = "/media/jonas/archive/master/data/rl_squad/experiments/Transformer_q2q_medium/"
     model = RLTransformer(base_path, reward_function, input_size=emb_size,num_layers=n_layers, output_size=vocab_size, device=device,nhead=nhead, dropout=dropout, d_model=d_model, dff=dff, lr=lr,l2=l2)
     epoch = model.load(load_path +"/latest",train=True)
     epoch=0

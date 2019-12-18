@@ -1,22 +1,18 @@
 import numpy as np
-import torch
 
 class RankReward:
-    def __init__(self):
-        pass
-    def __call__(self,search_results,target,base_reward,length):
-        mr = []
+    def __init__(self,base_line):
+        self.base_line = base_line
+        self.name = "RankReward"
+    def __call__(self,search_results,target):
         batch_size = len(search_results)
+        rewards = []
         for i in range(batch_size):
             prec = precision(search_results[i],target[i]["c_id"])
-            reward = prec
-            mr.append(reward)
+            rewards.append(prec)
 
-
-        mr = np.sum(mr) / len(search_results)
-        rewards_t = torch.Tensor(length, batch_size).fill_(mr).cuda().double()
-        base_reward_t = torch.Tensor(length, batch_size).fill_(base_reward).cuda().double()
-        return rewards_t,base_reward_t,mr
+        base_reward,normalized_reward = self.base_line(rewards)
+        return np.mean(rewards),base_reward,normalized_reward
 
 def get_corrent_document_rank(results,doc_id):
 

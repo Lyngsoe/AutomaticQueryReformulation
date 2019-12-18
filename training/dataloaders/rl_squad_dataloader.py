@@ -18,7 +18,6 @@ class RLSquadDataloader:
         q_embedding = []
         relevant_documents = []
         q_txt = []
-        base_rewards = []
 
         for i in range(self.batch_size):
             try:
@@ -28,19 +27,18 @@ class RLSquadDataloader:
                 if len(q_embedding) < 1:
                     raise StopIteration
                 else:
-                    return self.on_return(q_embedding, relevant_documents, q_txt,base_rewards)
+                    return self.on_return(q_embedding, relevant_documents, q_txt)
 
             # X
-            base_rewards.append(qa["base_reward"])
             q_embedding.append(qa["question_emb"])
             q_txt.append(qa["question"])
 
             # Y
-            relevant_documents.append(qa["paragraphs"])
+            relevant_documents.append({"paragraphs":qa["paragraphs"],"c_id":qa["c_id"]})
 
-        return self.on_return(q_embedding, relevant_documents, q_txt,base_rewards)
+        return self.on_return(q_embedding, relevant_documents, q_txt)
 
-    def on_return(self, q_embedding, relevant_documents, q_txt,base_rewards):
+    def on_return(self, q_embedding, relevant_documents, q_txt):
         max_seq_len = 0
 
         for q in q_embedding:
@@ -65,9 +63,9 @@ class RLSquadDataloader:
 
 
         if self.eval:
-            return q_batch, relevant_documents, q_txt,base_rewards,q_mask
+            return q_batch, relevant_documents, q_txt,q_mask
 
-        return q_batch, relevant_documents,base_rewards,q_mask
+        return q_batch, relevant_documents,q_mask
 
     def __iter__(self):
         return self

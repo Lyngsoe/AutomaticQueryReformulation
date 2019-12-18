@@ -1,14 +1,11 @@
 import torch
 import torch.nn as nn
-from torch.nn.modules.transformer import TransformerEncoderLayer,TransformerDecoderLayer
-from models.modules.transformer_encoder import MyTransformerEncoder
-from models.modules.transformer_decoder import MyTransformerDecoder
-from models.modules.transformer import Transformer
-from torch.nn.modules.normalization import LayerNorm
+from torch.nn.modules.transformer import Transformer
 import numpy as np
 from datetime import datetime
 from torch.nn.modules import Linear
 from torch.autograd import Variable
+import math
 
 class RLTransformer:
 
@@ -17,30 +14,32 @@ class RLTransformer:
         self.save_path = self.base_path + "experiments/"
         self.device = device
         self.model_name = "Transformer"
+        self.vocab_size = output_size
+        self.lr = lr
+        self.d_mdodel = d_model
         self.reward_function = reward_function
 
         self.exp_name = exp_name if exp_name is not None else self.get_exp_name()
 
-        self.linear_in = Linear(input_size, d_model).cuda().double()
-        encoder_layer = TransformerEncoderLayer(d_model=d_model,nhead=nhead,dim_feedforward=dff,dropout=dropout)
-        self.encoder = MyTransformerEncoder(encoder_layer, num_layers,norm=LayerNorm(d_model))
+        self.linear_in = Linear(input_size,d_model).cuda().double()
+        self.model = Transformer(d_model=d_model,nhead=nhead,num_decoder_layers=num_layers,num_encoder_layers=num_layers,dim_feedforward=dff,dropout=dropout).cuda().double()
+        self.linear_out = Linear(d_model,output_size).cuda().double()
+        self.target_in = nn.Embedding(output_size, d_model, padding_idx=1).cuda().double()
 
-        decoder_layer = TransformerDecoderLayer(d_model=d_model,nhead=nhead,dim_feedforward=dff,dropout=dropout)
-        self.decoder = MyTransformerDecoder(decoder_layer, num_layers,norm=LayerNorm(d_model))
 
-        self.model = Transformer(d_model=input_size,nhead=nhead,custom_encoder=self.encoder,custom_decoder=self.decoder)
-        self.linear_out = Linear(d_model, output_size).cuda().double()
+        self.pos_enc = PositionalEncoding(d_model,dropout).cuda().double()
 
-        self.vocab_size = output_size
-        self.d_model = d_model
-        self.lr = lr  # learning rate
-        params = list(self.linear_in.parameters()) + list(self.model.parameters()) + list(self.linear_out.parameters())
-        #self.optimizer = torch.optim.SGD(params, lr=self.lr,weight_decay=l2)
-        self.optimizer = torch.optim.Adam(params, lr=self.lr, weight_decay=l2)
-        self.model.cuda()
-        self.model.double()
-        print("#parameter:", sum([np.prod(p.size()) for p in self.model.parameters()]))
 
+        classW = torch.ones(output_size, device=self.device).double()
+        classW[1] = 0
+
+        self.criterion = nn.CrossEntropyLoss(weight=classW)
+
+        params = list(self.linear_in.parameters()) + list(self.model.parameters()) + list(self.linear_out.parameters()) + list(self.target_in.parameters())
+        self.optimizer = torch.optim.Adam(params, lr=self.lr,weight_decay=l2)
+
+        params = list(self.linear_in.parameters()) + list(self.model.parameters()) + list(self.linear_out.parameters()) + list(self.target_in.parameters())
+        print("#parameters:", sum([np.prod(p.size()) for p in params]))
 
     def train_predict(self,x,q_mask):
         #print("x:",x.size())
@@ -50,10 +49,10 @@ class RLTransformer:
         self.optimizer.zero_grad()
         max_len = 20
 
-        sos_token = torch.Tensor(x.size(1), x.size(2)).fill_(0.1).cuda().double()
-        m_out = self.linear_in(x[0]).unsqueeze(0)
+        m_out = torch.Tensor(1,x.size(1)).fill_(2).cuda().long()
 
         lin_in = self.linear_in(x)
+        lin_in = self.pos_enc(lin_in)
 
         q_mask = q_mask == 1
 
@@ -61,77 +60,61 @@ class RLTransformer:
 
             mask = (torch.triu(torch.ones(i, i)) == 1).transpose(0, 1).float()
             mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
+            tgt_in = self.pos_enc(self.target_in(m_out[:i]))
+            out = self.model(lin_in,tgt_in,tgt_mask=mask,src_key_padding_mask=q_mask)
+            cur_pred = torch.argmax(self.linear_out(out[-1]),dim=1)
+            m_out = torch.cat((m_out,cur_pred.unsqueeze(0)))
 
-            out = self.model(lin_in,m_out[:i],tgt_mask=mask,src_key_padding_mask=q_mask)
-            m_out = torch.cat((m_out,out[-1].unsqueeze(0)))
 
-        m_out = m_out.masked_fill(torch.isnan(m_out), 0)
-
-        self.preds = self.linear_out(m_out)
+        self.preds = self.linear_out(out)
         preds_no_grad = self.preds.detach()
 
         return preds_no_grad.cpu().numpy()
 
     def predict(self,x,q_mask):
-        #print("x:",x.size())
-        #with torch.no_grad():
+        self.optimizer.zero_grad()
         self.model.eval()
         self.linear_out.eval()
         self.linear_in.eval()
-
         max_len = 20
-        sos_token = torch.Tensor(x.size(1), x.size(2)).fill_(0.1).cuda().double()
-        m_out = self.linear_in(x[0]).unsqueeze(0)
+
+        m_out = torch.Tensor(1, x.size(1)).fill_(2).cuda().long()
 
         lin_in = self.linear_in(x)
+        lin_in = self.pos_enc(lin_in)
 
         q_mask = q_mask == 1
 
-        for i in range(1,max_len):
+        for i in range(1, max_len):
             mask = (torch.triu(torch.ones(i, i)) == 1).transpose(0, 1).float()
             mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
+            tgt_in = self.pos_enc(self.target_in(m_out[:i]))
+            out = self.model(lin_in, tgt_in, tgt_mask=mask, src_key_padding_mask=q_mask)
+            cur_pred = torch.argmax(self.linear_out(out[-1]), dim=1)
 
-            out = self.model(lin_in, m_out, tgt_mask=mask, src_key_padding_mask=q_mask)
-            m_out = torch.cat((m_out,out[-1].unsqueeze(0)))
+            m_out = torch.cat((m_out, cur_pred.unsqueeze(0)))
 
-        m_out = m_out.masked_fill(torch.isnan(m_out), 0)
-        self.preds = self.linear_out(m_out)
+        self.preds = self.linear_out(out)
 
         return self.preds.detach().cpu().numpy()
 
     def calc_reward(self,*args,**kwargs):
         return self.reward_function(*args,**kwargs)
 
-    def update_policy(self,reward,base_reward,update = True):
+    def update_policy(self,reward,update = True):
         # Update network weights
-        reward = Variable(reward[:self.preds.size(0)].unsqueeze(2))
-        base_reward = Variable(base_reward[:self.preds.size(0)].unsqueeze(2))
+        reward = Variable(torch.from_numpy(np.array(reward)).double().cuda())
 
-        batch_size = reward.size(1)
+
         self.preds = torch.softmax(self.preds,dim=2)
-        h = torch.Tensor(batch_size).zero_().to(self.device).type(torch.float64)
-        for i in range(self.preds.size(0)):
-            h+= torch.sum (torch.mul( self.preds[i] , torch.log(self.preds[i]) ) ,dim=1)
-        regularization = torch.mean(torch.Tensor(batch_size).fill_(0.001).to(self.device).type(torch.float64) * h)
+        weights = torch.log(torch.max(self.preds,dim=2)[0])
+        weights = torch.matmul(weights,reward)
 
-        #print("reward:", reward.size())
-        q_expected = torch.log(torch.max(self.preds)) * reward
-        #print("q_expected:",q_expected.size())
-        q_expected = torch.mean(torch.sum(q_expected.squeeze(0), dim=0))
-        #print("q_expected:", q_expected)
-
-        q0_expected = torch.log(torch.max(self.preds)) * base_reward
-        #print("q0_expected:", q0_expected.size())
-        q0_expected = torch.mean(torch.sum(q0_expected.squeeze(0), dim=0))
-        #print("q0_expected:", q0_expected)
-
-        #print(regularization)
-        loss = -((q_expected - q0_expected) - regularization)
+        loss = -(torch.mean(weights))
 
         if update:
             loss.backward()
             self.optimizer.step()
-        #print("loss:",loss.item())
 
         return loss.item()
 
@@ -147,7 +130,6 @@ class RLTransformer:
         self._save(epoch,save_path)
 
     def _save(self, epoch, save_path):
-
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.linear_in.state_dict(),
@@ -157,16 +139,22 @@ class RLTransformer:
             'epoch': epoch,
             'model_state_dict': self.model.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict()
-        }, save_path + "/model.pt")
+            }, save_path+"/model.pt")
 
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.linear_out.state_dict(),
         }, save_path + "/linear_out.pt")
 
-    def load(self, save_path, train):
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': self.target_in.state_dict(),
+        }, save_path + "/target_in.pt")
 
-        checkpoint = torch.load(save_path + "/model.pt")
+
+    def load(self,save_path,train):
+
+        checkpoint = torch.load(save_path+"/model.pt")
         self.model.load_state_dict(checkpoint["model_state_dict"])
         #self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         epoch = checkpoint["epoch"]
@@ -176,6 +164,9 @@ class RLTransformer:
 
         checkpoint = torch.load(save_path + "/linear_out.pt")
         self.linear_out.load_state_dict(checkpoint["model_state_dict"])
+
+        checkpoint = torch.load(save_path + "/target_in.pt")
+        self.target_in.load_state_dict(checkpoint["model_state_dict"])
 
         if train:
             self.model.train()
@@ -187,3 +178,21 @@ class RLTransformer:
             self.linear_out.eval()
 
         return epoch
+
+class PositionalEncoding(nn.Module):
+
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        x = x + self.pe[:x.size(0), :]
+        return self.dropout(x)

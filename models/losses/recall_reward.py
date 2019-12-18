@@ -1,22 +1,18 @@
 import numpy as np
-import torch
 
 class RecallRewardMean:
-    def __init__(self):
-        pass
-    def __call__(self,search_results,target,base_reward,length):
-        mr = []
+    def __init__(self,base_line):
+        self.base_line = base_line
+        self.name = "RecallRewardMean"
+    def __call__(self,search_results,target):
         batch_size = len(search_results)
         rewards = []
         for i in range(batch_size):
             recall = recll_40(search_results[i],target[i]["paragraphs"])
-            rewards.append(torch.Tensor(length).fill_(recall/length).cuda().double())
-            mr.append(recall)
+            rewards.append(recall)
 
-        mr = np.mean(mr)
-        rewards_t = torch.stack(rewards,dim=1)
-        base_reward_t = torch.Tensor(length, batch_size).fill_(base_reward).cuda().double()
-        return rewards_t,base_reward_t,mr
+        base_reward,normalized_reward = self.base_line(rewards)
+        return np.mean(rewards),base_reward,normalized_reward
 
 
 def get_documents_from_result(results):
