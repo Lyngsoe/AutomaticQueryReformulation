@@ -34,7 +34,7 @@ class RLSquadDataloader:
             q_txt.append(qa["question"])
 
             # Y
-            relevant_documents.append({"paragraphs":qa["paragraphs"],"c_id":qa["c_id"]})
+            relevant_documents.append({"paragraphs":qa["paragraphs"],"c_id":qa["c_id"],"q_id":qa["q_id"]})
 
         return self.on_return(q_embedding, relevant_documents, q_txt)
 
