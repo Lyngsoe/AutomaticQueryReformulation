@@ -5,6 +5,9 @@ from models.losses.rank_loss import RankReward
 from models.baselines.moving_avg import MovingAverage,MovingStdAverage,MovingQuestionStdAverage
 from search_engine.elastic_search import ELSearch
 import torch
+import jsonlines
+import json
+from tqdm import tqdm
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -28,7 +31,16 @@ l2 = 0
 
 #base_line = MovingAverage(0.42499358759755385)
 #base_line = MovingStdAverage()
+
 base_line = MovingQuestionStdAverage()
+
+info = json.load(open(base_path+"info.json"))
+pbar = tqdm(total=info["qas"],desc="loading questions")
+for q in jsonlines.open(base_path+"qas.jsonl"):
+    base_line.update([q["base_reward"]], [q["q_id"]])
+    pbar.update()
+pbar.close()
+
 reward_function = RecallRewardMean(base_line)
 
 specs = {
