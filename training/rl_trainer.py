@@ -16,7 +16,7 @@ class Trainer:
         self.max_epoch = max_epoch
         self.device = device
         self.max_seq_len = max_seq_len
-        self.min_test_loss = None
+        self.min_test_reward = None
         self.exp_path = model.save_path + model.exp_name
         self.search_engine = search_engine
         self.loss = None
@@ -28,10 +28,9 @@ class Trainer:
             specs.update({"model_name:":model.exp_name})
             json.dump(specs,open(self.exp_path+"/specs.json",'w'))
 
-    def evaluate(self,train_loss,base_reward):
+    def evaluate(self,base_reward):
         eval_data = RLSquadDataloader(base_path=self.base_path,batch_size=1,max_length=self.max_seq_len,eval=True)
         i_eval = 0
-        test_loss = 0
         test_reward = 0
         w = self.get_test_reward()
         pbar = tqdm(total=5928, desc="evaluating batches for epoch {}".format(self.epoch))
@@ -45,46 +44,40 @@ class Trainer:
             predicted_sentence = construct_sentence(predictions)
             sentence_cutoff = prune(predicted_sentence)
             search_results = self.search_engine.search(sentence_cutoff)
-            reward,base_reward,normarlized_reward = self.model.reward_function(search_results,relevant_documents)
-            loss = self.model.update_policy(normarlized_reward,update=False)
+            reward,_,_ = self.model.reward_function(search_results,relevant_documents)
 
 
-            w.write({"reward": reward, "sentence": sentence_cutoff})
+            w.write({"reward": np.mean(reward), "sentence": sentence_cutoff})
 
-
-            test_loss+=loss
-            test_reward+=reward
+            test_reward+=np.mean(reward)
             pbar.update()
             if i_eval < 3:
                 tqdm.write("#### EVAL")
                 tqdm.write("query: {}".format(q_txt))
                 tqdm.write("prediction: {}".format(sentence_cutoff))
-                tqdm.write("loss: {} reward: {}".format(loss,reward))
+                tqdm.write("reward: {}".format(np.mean(reward)))
             i_eval+=1
             if i_eval > 100:
                 break
 
-        test_loss = test_loss/i_eval
         test_reward = test_reward / i_eval
         pbar.close()
         w.close()
         epoch_summary = {
             "epoch":self.epoch,
-            "test_loss":test_loss,
             "test_reward": test_reward,
-            "train_loss":train_loss,
             "base_reward":base_reward,
         }
         self.get_result_writer().write(epoch_summary)
 
-        if self.min_test_loss is None or test_loss < self.min_test_loss:
-            self.min_test_loss = test_loss
+        if self.min_test_reward is None or test_reward < self.min_test_reward:
+            self.min_test_reward = test_reward
             self.model.save_best(self.epoch)
 
         self.model.save_latest(self.epoch)
         tqdm.write("\n\n####################")
         tqdm.write("model saved!")
-        tqdm.write("epoch: {} train_loss: {} base_reward: {}  test_loss: {}  test_reward: {}".format(self.epoch,train_loss,base_reward,test_loss,test_reward))
+        tqdm.write("epoch: {} base_reward: {} test_reward: {}".format(self.epoch,base_reward,test_reward))
         tqdm.write("####################\n\n")
 
     def train(self):
@@ -103,12 +96,13 @@ class Trainer:
                 predicted_sentence = construct_sentence(predictions)
                 sentence_cutoff = prune(predicted_sentence)
                 search_results = self.search_engine.search(sentence_cutoff)
-                reward,base_reward,normarlized_reward = self.model.reward_function(search_results,relevant_documents)
+                rewards,base_reward,normarlized_reward = self.model.reward_function(search_results,relevant_documents)
 
                 loss = self.model.update_policy(normarlized_reward)
                 normarlized_reward = np.mean(normarlized_reward)
-                self.write_reward(reward,base_reward,normarlized_reward)
-                self.model.reward_function.base_line.update(reward)
+                base_reward = np.mean(base_reward)
+                self.write_reward(np.mean(rewards),base_reward,normarlized_reward)
+                self.model.reward_function.base_line.update(rewards,[q["q_id"] for q in relevant_documents])
 
                 self.calc_loss(loss)
 
@@ -117,14 +111,14 @@ class Trainer:
                 if train_iter % int(((self.data_points/self.batch_size)/10)) == 0:
                     [tqdm.write(sentence) for sentence in predicted_sentence[:4]]
                     pbar.close()
-                    self.evaluate(self.loss,base_reward)
+                    self.evaluate(base_reward)
                     pbar = tqdm(total=int(self.data_points/self.batch_size),
                                 desc="training batches for epoch {}".format(self.epoch))
                     pbar.update(train_iter)
 
             pbar.close()
 
-            self.evaluate(self.loss,base_reward)
+            self.evaluate(base_reward)
             self.epoch += 1
 
     def write_reward(self,reward,base_reward,normarlized_reward):

@@ -11,8 +11,8 @@ class RecallRewardMean:
             recall = recll_40(search_results[i],target[i]["paragraphs"])
             rewards.append(recall)
 
-        base_reward,normalized_reward = self.base_line(rewards)
-        return np.mean(rewards),base_reward,normalized_reward
+        base_reward,normalized_reward = self.base_line(rewards,[q["q_id"] for q in target])
+        return rewards,base_reward,normalized_reward
 
 
 def get_documents_from_result(results):

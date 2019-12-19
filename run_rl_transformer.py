@@ -2,7 +2,7 @@ from training.rl_trainer import Trainer
 from models.rl_transformer import RLTransformer
 from models.losses.recall_reward import RecallRewardMean
 from models.losses.rank_loss import RankReward
-from models.baselines.moving_avg import MovingAverage,MovingStdAverage
+from models.baselines.moving_avg import MovingAverage,MovingStdAverage,MovingQuestionStdAverage
 from search_engine.elastic_search import ELSearch
 import torch
 
@@ -27,7 +27,8 @@ epochs = 500
 l2 = 0
 
 #base_line = MovingAverage(0.42499358759755385)
-base_line = MovingStdAverage()
+#base_line = MovingStdAverage()
+base_line = MovingQuestionStdAverage()
 reward_function = RecallRewardMean(base_line)
 
 specs = {
