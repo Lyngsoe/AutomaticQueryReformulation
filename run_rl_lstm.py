@@ -16,7 +16,7 @@ base_path = "/media/jonas/archive/master/data/rl_squad/"
 
 vocab_size = 30522
 emb_size = 768 # embedding dimension
-hidden_size = 256 # the dimension
+hidden_size = 2024 # the dimension
 dropout = 0.2 # the dropout value
 batch_size = 8
 lr = 10e-7

@@ -27,7 +27,8 @@ def read_squad(path):
                     q_id = qa["id"]
 
                     qas_to_write.append({"question":q,"c_id":c_id,"q_id":q_id,"title":title,"paragraphs":para_ids})
-
+        if len(qas_to_write) > 10000:
+            break
     return qas_to_write,paragraphs
 
 
@@ -37,7 +38,7 @@ def write_batch(writer,qas):
 
 
 #base_path = "/home/jonas/data/squad/"
-base_path = "/media/jonas/archive/master/data/rl_squad/"
+base_path = "/media/jonas/archive/master/data/rl_squad_sub/"
 os.makedirs(base_path,exist_ok=True)
 
 dataset_path = base_path+"train-v2.0.json"
@@ -75,11 +76,10 @@ qas_eval,para_eval = read_squad(dataset_path_eval)
 paragraphs.extend(para_eval)
 
 para_writer = jsonlines.open(base_path+"paragraphs.jsonl",'w',flush=True)
-random.shuffle(qas)
+random.shuffle(qas_eval)
 write_batch(para_writer,paragraphs)
-paragraphs = []
-
 info.update({"qas_eval":len(qas_eval),"paragraphs":len(paragraphs)})
+paragraphs = []
 
 i = 0
 for qa in tqdm(qas_eval,desc="embedding questions in eval"):

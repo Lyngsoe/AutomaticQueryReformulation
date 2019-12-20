@@ -1,14 +1,14 @@
 import torch
 from models.my_transformer import MyTransformer
 from dataset.bertify import construct_sentence,get_tokens
-from training.dataloaders.squad_dataloader_2 import SquadDataloader2
+from training.dataloaders.squad_dataloader_q2q import SquadDataloaderQ2Q
 from tqdm import tqdm
 import jsonlines
 import numpy as np
 
 def evaluate(model,device,save_path,max_seq_len=300):
-    writer = jsonlines.open(save_path+"predictions.jsonl",'w',flush=True)
-    eval_data = SquadDataloader2(base_path=base_path, batch_size=1, max_length=max_seq_len, eval=True)
+    writer = jsonlines.open(save_path+"predictions_q2q.jsonl",'w',flush=True)
+    eval_data = SquadDataloaderQ2Q(base_path=base_path, batch_size=1, max_length=max_seq_len, eval=True)
     i_eval = 0
     test_loss = 0
     pbar = tqdm(total=5928, desc="evaluating")

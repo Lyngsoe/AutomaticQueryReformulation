@@ -43,7 +43,7 @@ class LSTMAutoEncoder:
 
         batch_size = input_tensor.size(1)
         input_length = input_tensor.size(0)
-        target_length = input_length
+        target_length = 20
 
         #self.encoder.initHidden(self.device,batch_size=batch_size)
 

@@ -100,7 +100,7 @@ class TrainerSubwords:
                 pbar.set_description("training batches for epoch {} with training loss: {:.6f} train: {:.2f} load: {:.2f}".format(self.epoch, mbl/temp_train_iter ,total_train_time / train_iter, total_data_load_time / train_iter))
                 pbar.update()
                 start_data_load = time.time()
-                if train_iter % int(((86821 / self.batch_size)/10)) == 0:
+                if train_iter % int(((86821 / self.batch_size)/1000)) == 0:
                     pbar.close()
                     sentences = construct_sentence(predictions)
                     tqdm.write("\nTRAIN:\n")

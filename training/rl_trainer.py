@@ -20,6 +20,7 @@ class Trainer:
         self.exp_path = model.save_path + model.exp_name
         self.search_engine = search_engine
         self.loss = None
+        self.base_reward = None
         self.make_dir()
         self.info = json.load(open(base_path+"info.json"))
         self.data_points = self.info["qas"]
@@ -57,7 +58,7 @@ class Trainer:
                 tqdm.write("prediction: {}".format(sentence_cutoff))
                 tqdm.write("reward: {}".format(np.mean(reward)))
             i_eval+=1
-            if i_eval > 100:
+            if i_eval > 300:
                 break
 
         test_reward = test_reward / i_eval
@@ -100,25 +101,23 @@ class Trainer:
 
                 loss = self.model.update_policy(normarlized_reward)
                 normarlized_reward = np.mean(normarlized_reward)
-                base_reward = np.mean(base_reward)
+                self.calc_mean_base_reward(np.mean(base_reward))
                 self.write_reward(np.mean(rewards),base_reward,normarlized_reward)
                 self.model.reward_function.base_line.update(rewards,[q["q_id"] for q in relevant_documents])
 
                 self.calc_loss(loss)
 
-                pbar.set_description("training batches for epoch {} with training loss: {:.3f}, normalized reward: {:.6f} base reward {:.6f}".format(self.epoch, self.loss,normarlized_reward,base_reward))
+                pbar.set_description("training batches for epoch {} with training loss: {:.3f}, normalized reward: {:.6f} base reward {:.6f}".format(self.epoch, self.loss,normarlized_reward,self.base_reward))
                 pbar.update()
-                if train_iter % int(((self.data_points/self.batch_size)/10)) == 0:
-                    [tqdm.write(sentence) for sentence in predicted_sentence[:4]]
-                    pbar.close()
-                    self.evaluate(base_reward)
-                    pbar = tqdm(total=int(self.data_points/self.batch_size),
-                                desc="training batches for epoch {}".format(self.epoch))
-                    pbar.update(train_iter)
+                #if train_iter % int(((self.data_points/self.batch_size)/10)) == 0:
+                    #[tqdm.write(sentence) for sentence in predicted_sentence[:4]]
+                    #pbar.close()
+                    #self.evaluate(self.base_reward)
+                    #pbar = tqdm(total=int(self.data_points/self.batch_size),desc="training batches for epoch {}".format(self.epoch))
+                    #pbar.update(train_iter)
 
             pbar.close()
-
-            self.evaluate(base_reward)
+            self.evaluate(self.base_reward)
             self.epoch += 1
 
     def write_reward(self,reward,base_reward,normarlized_reward):
@@ -160,7 +159,12 @@ class Trainer:
         os.makedirs(self.exp_path + "/latest", exist_ok=True)
         os.makedirs(self.exp_path + "/best", exist_ok=True)
 
-
+    def calc_mean_base_reward(self,r):
+        if self.base_reward is None:
+            self.base_reward = r
+        else:
+            g = 0.001
+            self.base_reward = g * r + (1 - g) * self.base_reward
 
     def calc_loss(self,l):
         if self.loss is None:

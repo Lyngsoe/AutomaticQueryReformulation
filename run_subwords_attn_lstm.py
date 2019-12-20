@@ -3,8 +3,8 @@ from models.LSTM_attention_subwords import LSTMAutoEncoder
 import torch
 
 
-#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = "cpu"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#device = "cpu"
 print(device)
 #base_path = "/home/jonas/data/squad/"
 base_path = "/media/jonas/archive/master/data/squad2/"

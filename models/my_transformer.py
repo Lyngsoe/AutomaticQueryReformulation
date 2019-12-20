@@ -105,6 +105,32 @@ class MyTransformer:
 
         return loss.item(),preds.cpu().numpy()
 
+    def predict_search(self,x):
+
+        with torch.no_grad():
+            self.model.eval()
+            max_len = 20
+
+            m_out = torch.zeros(max_len,x.size(1)).cuda().long()
+            m_out[0] = torch.Tensor(x.size(1),1).fill_(2).cuda().long()
+
+            lin_in = self.linear_in(x)
+            lin_in = self.pos_enc(lin_in)
+
+
+            for i in range(1, max_len):
+
+                mask = (torch.triu(torch.ones(i,i)) == 1).transpose(0, 1).float()
+                tgt_mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
+                tgt_in = self.pos_enc(self.target_in(m_out[:i]))
+                out = self.model(lin_in,tgt_in, tgt_mask=tgt_mask)
+                m_out[i] = torch.argmax(self.linear_out(out[-1]))
+
+            preds = self.linear_out(out)
+
+        return preds.cpu().numpy()
+
+
     def get_exp_name(self):
         now = datetime.now()
         return self.model_name+"__"+now.strftime("%m-%d_%H:%M")

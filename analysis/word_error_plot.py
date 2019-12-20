@@ -30,7 +30,7 @@ def wer(r, h):
     return d[len(r)][len(h)]
 
 
-base_path = "/home/jonas/data/squad/"
+base_path = "/media/jonas/archive/master/data/squad/cluster_exp/17_12_19/experiments/Transformer__12-16_17:45/"
 
 reader = jsonlines.open(base_path+"predictions.jsonl",'r')
 
@@ -38,7 +38,7 @@ wers = []
 pbar = tqdm(total=5928,desc="calculating WER")
 for qa in reader:
     ground_truth = qa["targets"]
-    hypothesis = qa["sentence"]
+    hypothesis = qa["sentence"][0]
     index = hypothesis.find("?")
     if index != -1:
         hypothesis = hypothesis[:index+1]
@@ -53,7 +53,7 @@ pbar.close()
 
 print("average WER: ",np.average(wers))
 plt.hist(wers,rwidth=0.5,bins=30)
-plt.title("Word Error Rate - Transformer Medium")
+plt.title("Word Error Rate - Transformer Small")
 plt.xlabel("Word Error Rate")
 plt.ylabel("Number of Questions")
 plt.savefig("fig/worderrorrate.png")

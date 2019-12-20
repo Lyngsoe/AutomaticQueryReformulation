@@ -11,8 +11,8 @@ class RankReward:
             prec = precision(search_results[i],target[i]["c_id"])
             rewards.append(prec)
 
-        base_reward,normalized_reward = self.base_line(rewards)
-        return np.mean(rewards),base_reward,normalized_reward
+        base_reward,normalized_reward = self.base_line(rewards,[q["q_id"] for q in target])
+        return rewards,base_reward,normalized_reward
 
 def get_corrent_document_rank(results,doc_id):
 

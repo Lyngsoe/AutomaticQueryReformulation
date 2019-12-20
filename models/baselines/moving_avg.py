@@ -55,21 +55,27 @@ class MovingStdAverage:
                 if base_reward == 0:
                     normalized_reward.append(r)
                 else:
-                    normalized_reward.append((r - base_reward) / np.std(self.base_reward[:self.startup]))
+                    std = np.std(self.base_reward[:self.startup])
+                    if std == 0:
+                        std = 1
+                    normalized_reward.append((r - base_reward) / std)
             else:
-                normalized_reward.append((r - base_reward) / np.std(self.base_reward))
+                std = np.std(self.base_reward)
+                if std == 0:
+                    std = 1
+                normalized_reward.append((r - base_reward) / std)
         return base_reward, normalized_reward
 
     def update(self, r,q_ids):
         self.iter +=1
         self.startup+=1
         self.iter %= self.window_size
-        self.base_reward[int(self.iter)] = r
+        self.base_reward[int(self.iter)] = np.mean(r)
 
 
 class MovingQuestionStdAverage:
     def __init__(self,window_size=10):
-        self.name = "MovingStdAverage"
+        self.name = "MovingQuestionStdAverage"
         self.base_reward = {}
         self.window_size = window_size
         self.delta = 0.0001
@@ -124,7 +130,7 @@ class MovingQuestionStdAverage:
                 r = 0.0001
             cur_rewards.append(r)
         else:
-            cur_rewards[self.iter] = r
+            cur_rewards[np.argmin(cur_rewards)] = r
 
 
         self.base_reward.update({q_id:cur_rewards})

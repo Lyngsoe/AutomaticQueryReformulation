@@ -43,4 +43,5 @@ def prune(sentences):
         if index != -1:
             sentence = sentence[:index + 1]
         pruned.append(sentence)
+
     return pruned

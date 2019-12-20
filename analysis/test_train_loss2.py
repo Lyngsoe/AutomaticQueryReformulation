@@ -10,7 +10,7 @@ def load_results(path):
     for line in r:
         e = line["epoch"]
         if e > epoch:
-            #epoch+=3
+            epoch+=1
             train_loss.append(line["train_loss"])
             test_loss.append(line["test_loss"])
 
@@ -53,8 +53,9 @@ def create_plot(exp_cur):
 
 
 plots = [
-    plot_spec.exps_small_trans_drop
-    #plot_spec.exps_trans,
+    #plot_spec.exps_q2q
+    plot_spec.exps_all_correct,
+    plot_spec.exps_all_subwords_correct,
     #plot_spec.exps_lstm,
     #plot_spec.exps_attn_lstm,
     #plot_spec.exps_trans_subwords,

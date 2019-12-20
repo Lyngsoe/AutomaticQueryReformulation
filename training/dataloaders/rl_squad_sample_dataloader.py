@@ -60,6 +60,7 @@ class RLSquadDataloader:
 
         q_mask = np.stack(mask_q)
 
+        print(q_txt)
 
         if self.eval:
             return q_batch, relevant_documents, q_txt,q_mask

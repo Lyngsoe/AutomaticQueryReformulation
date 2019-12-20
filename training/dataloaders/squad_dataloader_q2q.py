@@ -1,6 +1,7 @@
 import orjson
 import numpy as np
 from json.decoder import JSONDecodeError
+import copy
 
 class SquadDataloaderQ2Q:
     def __init__(self,base_path,max_length,eval,batch_size):
@@ -30,7 +31,7 @@ class SquadDataloaderQ2Q:
                 if len(input_batch) < 1:
                     raise StopIteration
                 else:
-                    return self.on_return(input_batch,output_batch,sources,targets,y_emb)
+                    return self.on_return(input_batch,output_batch,sources,targets,copy.deepcopy(input_batch))
 
 
 
@@ -47,7 +48,7 @@ class SquadDataloaderQ2Q:
             output_batch.append(out)
             targets.append(target)
 
-        return self.on_return(input_batch,output_batch,sources,targets,y_emb)
+        return self.on_return(input_batch,output_batch,sources,targets,copy.deepcopy(input_batch))
 
     def on_return(self,q_batch,y_batch,queries,targets,y_emb):
         max_seq_len_y = 0
@@ -75,7 +76,7 @@ class SquadDataloaderQ2Q:
 
         new_q_batch = []
         for q in q_batch:
-            new_q_batch.append(self.pad_x(q,max_seq_len_q))
+            new_q_batch.append(self.pad_x(self.add_start_token_x(q),max_seq_len_q))
 
         new_y_batch = []
         for y in y_batch:
@@ -83,7 +84,7 @@ class SquadDataloaderQ2Q:
 
         new_y_emb_batch = []
         for y in y_emb:
-            new_y_emb_batch.append(self.pad_x(y,max_seq_len_y))
+            new_y_emb_batch.append(self.pad_x(self.add_start_token_x(y),max_seq_len_y))
 
 
         y_batch = np.stack(new_y_batch)
@@ -113,6 +114,14 @@ class SquadDataloaderQ2Q:
             y.append(1)
         return y[:self.max_length]
 
+    def add_start_token_x(self,x):
+        sos = np.empty(768)
+        sos.fill(0.1)
+        x[0] = sos
+        return x
+    def add_start_token_y(self, y):
+        y.insert(0, 2)
+        return y
 
     def create_mask(self,seq_len,max_seq_len):
 

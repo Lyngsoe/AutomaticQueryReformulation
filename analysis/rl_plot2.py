@@ -6,41 +6,52 @@ import time
 
 def load_results(path):
     r = jsonlines.open(path+"norm_reward.jsonl")
-    norm_rewards = []
     base_reward = []
     reward = []
-    batch_size = 30
-    norm_rewards_temp = []
+    batch_size = 100
     base_reward_temp = []
     reward_temp = []
     for line in r:
-        norm_rewards_temp.append(line["reward"] - line["base_reward"])
         base_reward_temp.append(line["base_reward"])
         reward_temp.append(line["reward"])
         if len(base_reward_temp) >= batch_size:
-            norm_rewards.append(np.mean(norm_rewards_temp))
-            norm_rewards_temp = []
             base_reward.append(np.mean(base_reward_temp))
             base_reward_temp = []
             reward.append(np.mean(reward_temp))
             reward_temp = []
-    return norm_rewards,base_reward,reward
+
+
+    test_reward = []
+    sentences = []
+    batch_size = 10
+    base_reward_temp = []
+    r = jsonlines.open(path + "results.jsonl")
+    for line in r:
+        base_reward_temp.append(line["reward"])
+        if len(base_reward_temp) >= batch_size:
+            #sentences.append(line["sentence"])
+            test_reward.append(np.mean(base_reward_temp))
+            base_reward_temp = []
+    return base_reward,reward,test_reward,sentences
 
 
 def create_plot(exp_cur):
     fig = plt.figure()
-    st = fig.suptitle(exp_cur[0], fontsize="x-large")
+    base_line_train = exp_cur[0][1]
+    base_line_test = exp_cur[0][2]
+    st = fig.suptitle(exp_cur[0][0], fontsize="x-large")
     plt_base_reward = fig.add_subplot(221)
     #plt.ylim(4,10)
-    plt_normalized = fig.add_subplot(222,sharey=plt_base_reward)
+    plt_test = fig.add_subplot(222,sharey=plt_base_reward)
     plt_reward = fig.add_subplot(223,sharey=plt_base_reward)
 
     max_len = 0
+    max_len_test = 0
 
     for exp in exp_cur[1:]:
 
         exp_path = exp[0]
-        norm_rewards,base_reward,reward = load_results(exp_path)
+        base_reward,reward,test_reward,sentences = load_results(exp_path)
 
 
 
@@ -51,19 +62,25 @@ def create_plot(exp_cur):
         plt_reward.set_title('Train reward')
         plt_reward.set_xlabel('Train Iteration')
 
-        plt_normalized.set_title('Normalized train reward')
-        plt_normalized.set_xlabel('Train Iteration')
+        plt_test.set_title('Test reward')
+        plt_test.set_xlabel('Train Iteration')
         #plt_test.set_ylabel('Loss')
 
         if len(reward) > max_len:
             max_len = len(reward)
+        if len(test_reward) > max_len_test:
+            max_len_test = len(test_reward)
 
         plt_base_reward.plot(base_reward)
         plt_reward.plot(reward)
-        plt_normalized.plot(norm_rewards,label=exp[1])
+        plt_test.plot(test_reward,label=exp[1])
 
-    horiz_line_data = np.array([0.0606 for i in range(max_len)])
-    plt_reward.plot(horiz_line_data)
+    base_line = np.array([base_line_train for i in range(max_len)])
+    plt_reward.plot(base_line)
+    plt_base_reward.plot(base_line)
+
+    base_line = np.array([base_line_test for i in range(max_len_test)])
+    plt_test.plot(base_line)
 
     fig.set_figheight(15)
     fig.set_figwidth(15)
@@ -71,50 +88,52 @@ def create_plot(exp_cur):
     #plt.subplots_adjust(wspace=0.6,hspace=0.6)
 
     #plt.tight_layout(rect=[0,0,0.7,0.95])
-    fig.savefig("fig/{}.png".format(exp_cur[0].strip(" ")),bbox_inches = "tight")
-    print("Saved: fig/{}.png".format(exp_cur[0].strip(" ")))
+    fig.savefig("fig/{}.png".format(exp_cur[0][0].strip(" ")),bbox_inches = "tight")
+    print("Saved: fig/{}.png".format(exp_cur[0][0].strip(" ")))
 
 
 base_path = "/media/jonas/archive/master/data/rl_squad_sub/experiments/"
-exps_rl_amw = [
-    "Reinforcement learning with subset of dataset",
-    (base_path + "Transformer__12-17_10:22/", "MovingAvg 0 start"),
-    (base_path + "Transformer__12-17_12:24/", "MovingAvg q0 start"),
-    (base_path + "Transformer__12-17_13:57/", "MovingAvg avg start"),
-    #(base_path + "Transformer__12-17_15:07/", "MovingAvg reverse"),
 
+rank_rl_one_question = [
+    ("Rank Reward: Who else appeared with Beyonce in Telephone?",0.333),
+    (base_path + "Transformer__12-18_16:02/", "Dropout 0.2"),
+    (base_path + "Transformer__12-18_16:03/", "Dropout 0.3"),
 ]
 
-exps_rl_1_percent = [
-    "Reinforcement learning 1% question",
-    (base_path + "Transformer__12-17_15:49/", "MovingAvg 1% batch size 8"),
+recall_rl_one_question = [
+    ("Recall Reward: Who else appeared with Beyonce in Telephone?",0.0606),
+    (base_path + "Transformer__12-18_18:41/", "Dropout 0.2 - debut else appeared with beyonce in telephone ?"),
+    (base_path + "Transformer__12-18_18:42/", "Dropout 0.3 - who else performed with beyonce in telephone ?"),
 ]
 
-exps_rl_one_question_old = [
-    "old Reinforcement learning Question: Who else appeared with Beyonce in Telephone?",
-    (base_path + "Transformer__12-17_20:02/", "lr 10e-7, Sample size 1"),
-    (base_path + "Transformer__12-17_20:15/", "lr 10e-5, Sample size 1"),
-    (base_path + "Transformer__12-17_20:38/", "lr 10e-7, Sample size 8"),
-    (base_path + "Transformer__12-17_20:39/", "lr 10e-5, Sample size 8"),
-    (base_path + "Transformer__12-17_22:12/", "lr 10e-7, Sample size 1 drop 0.3"),
-    (base_path + "Transformer__12-17_22:13/", "lr 10e-7, Sample size 1 drop 0.2"),
+
+
+base_path = "/media/jonas/archive/master/data/rl_squad/experiments/"
+recall_rl = [
+    ("Recall Reward Q2Q Transformer",0.1867,0.2205),
+    ("/media/jonas/archive/master/data/rl_squad/cluster_exp/19_12_19/experiments/" + "RL_Transformer__12-18_21:12/", "Moving Avg"),
+    (base_path + "Transformer__12-19_15:11/", "Moving Avg per Question"),
 ]
 
-exps_rl_one_question = [
-    "Reinforcement learning Question: Who else appeared with Beyonce in Telephone?",
-    (base_path + "Transformer__12-17_22:13/", "Dropout 0.2"),
-    (base_path + "Transformer__12-17_22:12/", "Dropout 0.3"),
-    (base_path + "Transformer__12-18_07:30/", "Dropout 0.4"),
-    (base_path + "Transformer__12-18_07:31/", "Dropout 0.5"),
+base_path = "/media/jonas/archive/master/data/rl_squad/experiments/"
+recall_one_question = [
+    ("Recall Reward One Question",0.015,0.015),
+    (base_path + "Transformer__12-19_16:50/", "Dropout 0.2"),
+    (base_path + "Transformer__12-19_21:48/", "Dropout 0.3"),
+    (base_path + "Transformer__12-20_02:47/", "Dropout 0.4"),
 ]
 
+
+
+base_path = "/media/jonas/archive/master/data/rl_squad/experiments/"
+Rank_one_question = [
+    ("Rank Reward One Question",0.047619,0.047619),
+    (base_path + "Transformer__12-20_07:26/", "Dropout 0.2"),
+]
 
 
 plots = [
-    #exps_rl_amw,
-    #exps_rl_1_percent,
-    #exps_rl_one_question_old,
-    exps_rl_one_question
+    recall_one_question
 ]
 
 live = True
@@ -122,7 +141,7 @@ live = True
 while live:
     for p in plots:
         create_plot(p)
-    time.sleep(30)
+    time.sleep(60)
 
 for p in plots:
     create_plot(p)

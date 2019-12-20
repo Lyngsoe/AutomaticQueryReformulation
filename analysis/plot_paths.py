@@ -134,3 +134,34 @@ exps_small_trans_drop = [
     (base_path + "Transformer__12-15_16:44/", "0.5 dropout"),
 ]
 
+base_path = "/media/jonas/archive/master/data/squad/cluster_exp/17_12_19/experiments/"
+##  all exps
+exps_all_correct = [
+    "Question Generation with BERT embeddings",
+    (base_path + "Transformer__12-16_17:42/", "Transformer Large"),
+    (base_path + "Transformer__12-16_17:44/", "Transformer Medium"),
+    (base_path + "Transformer__12-16_17:45/", "Transformer Small"),
+    (base_path + "LSTM__12-16_21:43/", "LSTM Large"),
+    (base_path + "LSTM__12-16_21:49/", "LSTM Small"),
+    (base_path + "LSTM_attn__12-16_21:46/", "LSTM Attn Large"),
+    (base_path + "LSTM_attn__12-16_21:51/", "LSTM Attn Small"),
+]
+
+base_path = "/media/jonas/archive/master/data/squad/cluster_exp/17_12_19/experiments/"
+##  all exps
+exps_all_subwords_correct = [
+    "Question Generation with Wordpiece indices",
+    (base_path + "Transformer__12-16_22:15/", "Transformer Large"),
+    (base_path + "Transformer__12-16_22:17/", "Transformer Medium"),
+    (base_path + "LSTM__12-17_08:03/", "LSTM Large"),
+    (base_path + "LSTM__12-17_08:06/", "LSTM Small"),
+    (base_path + "LSTM_attn__12-17_08:40/", "LSTM Attn Large"),
+    (base_path + "LSTM_attn__12-17_08:41/", "LSTM Attn Small"),
+]
+
+base_path = "/media/jonas/archive/master/data/rl_squad/experiments/"
+##  all exps
+exps_q2q = [
+    "Question to Question with Bert embeddings",
+    (base_path + "Transformer_q2q_medium/", "Transformer Medium"),
+]
