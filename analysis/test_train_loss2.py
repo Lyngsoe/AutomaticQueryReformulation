@@ -33,12 +33,12 @@ def create_plot(exp_cur):
 
 
         plt_train.set_title('Train loss')
-        plt_train.set_xlabel('Train Iteration')
+        plt_train.set_xlabel('Epoch')
         plt_train.set_ylabel('Loss')
 
 
         plt_test.set_title('Test loss')
-        plt_test.set_xlabel('Train Iteration')
+        plt_test.set_xlabel('Epoch')
         #plt_test.set_ylabel('Loss')
 
 

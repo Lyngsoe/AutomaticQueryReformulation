@@ -58,8 +58,6 @@ class Trainer:
                 tqdm.write("prediction: {}".format(sentence_cutoff))
                 tqdm.write("reward: {}".format(np.mean(reward)))
             i_eval+=1
-            if i_eval > 300:
-                break
 
         test_reward = test_reward / i_eval
         pbar.close()

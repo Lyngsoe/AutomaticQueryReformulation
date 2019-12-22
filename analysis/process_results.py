@@ -11,12 +11,18 @@ def eval(results):
     precision = [[] for i in range(len(ranks))]
     map = [[] for i in range(len(ranks))]
 
+
     mrr = []
+    mean_rank = []
 
 
+    for targets,retrieved_doc_id in results:
 
-    for relevant_docs_id,retrieved_doc_id in results:
+        relevant_docs_id = targets["paragraphs"]
+        target_doc_id = targets["c_id"]
+
         mrr.append(calc_mrr(relevant_docs_id, retrieved_doc_id))
+        mean_rank.append(calc_mrr([target_doc_id],retrieved_doc_id))
 
         for i,r in enumerate(ranks):
 
@@ -35,7 +41,7 @@ def eval(results):
 
     print("\n")
     print("MRR:",np.mean(mrr))
-
+    print("mean_rank:",np.mean(mean_rank))
 
 
 def calc_recall(relevant_docs,retrieved_docs,rank):

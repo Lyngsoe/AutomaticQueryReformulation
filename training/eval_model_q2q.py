@@ -1,5 +1,6 @@
 import torch
 from models.my_transformer import MyTransformer
+from models.LSTM_attention import LSTMAutoEncoder
 from dataset.bertify import construct_sentence,get_tokens
 from training.dataloaders.squad_dataloader_q2q import SquadDataloaderQ2Q
 from tqdm import tqdm
@@ -45,7 +46,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 vocab_size = 30522
 emb_size = 768 # embedding dimension
-d_model = 256 # the dimension of the feedforward network model in nn.TransformerEncoder
+d_model = 512 # the dimension of the feedforward network model in nn.TransformerEncoder
 n_layers = 6 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
 nhead = 8 # the number of heads in the multiheadattention models
 dropout = 0.2 # the dropout value
@@ -53,10 +54,21 @@ dff = 4*d_model # dimension of feed forward
 batch_size = 8
 lr = 0.0001
 
+vocab_size = 30522
+emb_size = 768 # embedding dimension
+hidden_size_enc = 512 # the dimension
+hidden_size_dec = 4*hidden_size_enc
+dropout = 0.2 # the dropout value
+batch_size = 16
+lr = 0.00001
+epochs = 250
+encoder_layers = 4
+decoder_layers = 1
 
-model = MyTransformer(base_path,input_size=emb_size,output_size=vocab_size,device=device,nhead=nhead,dropout=dropout,d_model=d_model,dff=dff,lr=lr)
-load_path = "/media/jonas/archive/master/data/rl_squad/experiments/Transformer_q2q_medium/latest"
+base_load_path = "/media/jonas/archive/master/data/squad/cluster_exp/17_12_19/experiments/LSTM_attn__12-16_21:46/"
+#model = MyTransformer(base_path,input_size=emb_size,output_size=vocab_size,device=device,nhead=nhead,dropout=dropout,d_model=d_model,dff=dff,lr=lr)
+model = LSTMAutoEncoder(base_path, word_emb_size=emb_size, vocab_size=vocab_size, device=device,dropout=dropout, hidden_size_enc=hidden_size_enc,hidden_size_dec=hidden_size_dec,decoder_layers=decoder_layers,encoder_layers=encoder_layers, lr=lr)
+load_path = base_load_path + "latest/"
 model.load(load_path,train=False)
-save_path = "/media/jonas/archive/master/data/rl_squad/experiments/Transformer_q2q_medium/"
 
-evaluate(model,device,save_path=save_path)
+evaluate(model,device,save_path=base_load_path)

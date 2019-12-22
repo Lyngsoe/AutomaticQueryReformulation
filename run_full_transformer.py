@@ -8,7 +8,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #device = "cpu"
 
 #base_path = "/home/jonas/data/squad/"
-base_path = "/media/jonas/archive/master/data/squad/"
+base_path = "/media/jonas/archive/master/data/squad_real/"
 #base_path = "/scratch/s134280/squad/"
 
 vocab_size = 30522
@@ -16,10 +16,10 @@ emb_size = 768 # embedding dimension
 d_model = 768 # the dimension of the feedforward network model in nn.TransformerEncoder
 n_layers = 6 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
 nhead = 8 # the number of heads in the multiheadattention models
-dropout = 0.2 # the dropout value
+dropout = 0.4 # the dropout value
 dff = 2048 # dimension of feed forward
 batch_size = 4
-lr = 0.0001
+lr = 0.00001
 l2 = 0
 epochs = 100
 

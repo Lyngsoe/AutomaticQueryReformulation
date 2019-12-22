@@ -30,8 +30,8 @@ class BertEmbedderSub:
         from bert_embedding import BertEmbedding
         import mxnet as mx
         self.language = language
-        #ctx = mx.gpu(0)
-        self.bert_embedder = BertEmbedding(model="bert_12_768_12", dataset_name="book_corpus_wiki_en_uncased",max_seq_length=1000)
+        ctx = mx.gpu(0)
+        self.bert_embedder = BertEmbedding(ctx=ctx,model="bert_12_768_12", dataset_name="book_corpus_wiki_en_uncased",max_seq_length=1000)
 
     def __call__(self, sentences):
         results = self.bert_embedder(sentences)

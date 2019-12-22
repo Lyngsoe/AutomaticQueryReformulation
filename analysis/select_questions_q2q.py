@@ -31,8 +31,8 @@ def wer(r, h):
 
 
 base_path = "/media/jonas/archive/master/data/squad/cluster_exp/17_12_19/experiments/"
-model = "LSTM_attn__12-16_21:51/"
-reader = jsonlines.open(base_path+model+"predictions.jsonl",'r')
+model = "Transformer__12-16_17:44/"
+reader = jsonlines.open(base_path+model+"predictions_q2q.jsonl",'r')
 
 selected_questions = [
     "how many museums are in",

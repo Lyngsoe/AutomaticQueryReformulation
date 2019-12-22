@@ -43,7 +43,7 @@ for drop in drops_value:
 
     vocab_size = 30522
     emb_size = 768 # embedding dimension
-    d_model = 256 # the dimension of the feedforward network model in nn.TransformerEncoder
+    d_model = 128 # the dimension of the feedforward network model in nn.TransformerEncoder
     n_layers = 6 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
     nhead = 8 # the number of heads in the multiheadattention models
     dropout = drop # the dropout value
@@ -82,7 +82,7 @@ for drop in drops_value:
     load = True
 
     if load:
-        load_path = "/media/jonas/archive/master/data/rl_squad/experiments/Transformer_q2q_medium/"
+        load_path = "/media/jonas/archive/master/data/squad/cluster_exp/17_12_19/experiments/Transformer__12-16_17:45"
         model = RLTransformer(base_path, reward_function, input_size=emb_size,num_layers=n_layers, output_size=vocab_size, device=device,nhead=nhead, dropout=dropout, d_model=d_model, dff=dff, lr=lr,l2=l2)
         epoch = model.load(load_path +"/latest",train=True)
 

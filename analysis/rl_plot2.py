@@ -23,7 +23,7 @@ def load_results(path):
 
     test_reward = []
     sentences = []
-    batch_size = 10
+    batch_size = 5
     base_reward_temp = []
     r = jsonlines.open(path + "results.jsonl")
     for line in r:
@@ -40,10 +40,11 @@ def create_plot(exp_cur):
     base_line_train = exp_cur[0][1]
     base_line_test = exp_cur[0][2]
     st = fig.suptitle(exp_cur[0][0], fontsize="x-large")
-    plt_base_reward = fig.add_subplot(221)
+    #plt_base_reward = fig.add_subplot(221)
     #plt.ylim(4,10)
-    plt_test = fig.add_subplot(222,sharey=plt_base_reward)
-    plt_reward = fig.add_subplot(223,sharey=plt_base_reward)
+    plt_reward = fig.add_subplot(121)
+    plt_test = fig.add_subplot(122,sharey=plt_reward)
+
 
     max_len = 0
     max_len_test = 0
@@ -55,15 +56,15 @@ def create_plot(exp_cur):
 
 
 
-        plt_base_reward.set_title('Train base reward')
-        plt_base_reward.set_xlabel('Train Iteration')
-        plt_base_reward.set_ylabel('Reward')
+        #plt_base_reward.set_title('Train base reward')
+        #plt_base_reward.set_xlabel('Train Iteration')
+        #plt_base_reward.set_ylabel('Reward')
 
         plt_reward.set_title('Train reward')
-        plt_reward.set_xlabel('Train Iteration')
+        plt_reward.set_xlabel('100 Train Iteration')
 
-        plt_test.set_title('Test reward')
-        plt_test.set_xlabel('Train Iteration')
+        plt_test.set_title('Reward (No dropout)')
+        plt_test.set_xlabel('100 Train Iterations')
         #plt_test.set_ylabel('Loss')
 
         if len(reward) > max_len:
@@ -71,20 +72,20 @@ def create_plot(exp_cur):
         if len(test_reward) > max_len_test:
             max_len_test = len(test_reward)
 
-        plt_base_reward.plot(base_reward)
+        #plt_base_reward.plot(base_reward)
         plt_reward.plot(reward)
         plt_test.plot(test_reward,label=exp[1])
 
     base_line = np.array([base_line_train for i in range(max_len)])
     plt_reward.plot(base_line)
-    plt_base_reward.plot(base_line)
+    #plt_base_reward.plot(base_line)
 
     base_line = np.array([base_line_test for i in range(max_len_test)])
     plt_test.plot(base_line)
 
-    fig.set_figheight(15)
+    #fig.set_figheight(15)
     fig.set_figwidth(15)
-    fig.legend(loc='lower right',bbox_to_anchor=(0.8, 0.2))
+    fig.legend(loc='center right')
     #plt.subplots_adjust(wspace=0.6,hspace=0.6)
 
     #plt.tight_layout(rect=[0,0,0.7,0.95])
@@ -107,12 +108,14 @@ recall_rl_one_question = [
 ]
 
 
-
-base_path = "/media/jonas/archive/master/data/rl_squad/experiments/"
 recall_rl = [
     ("Recall Reward Q2Q Transformer",0.1867,0.2205),
     ("/media/jonas/archive/master/data/rl_squad/cluster_exp/19_12_19/experiments/" + "RL_Transformer__12-18_21:12/", "Moving Avg"),
-    (base_path + "Transformer__12-19_15:11/", "Moving Avg per Question"),
+]
+
+recall_rl = [
+    ("Recall Reward Q2Q Transformer",0.726,0.766),
+    ("/media/jonas/archive/master/data/rl_squad/cluster_exp/19_12_19/experiments/" + "RL_Transformer__12-18_21:12/", "Moving Avg"),
 ]
 
 base_path = "/media/jonas/archive/master/data/rl_squad/experiments/"
@@ -121,19 +124,35 @@ recall_one_question = [
     (base_path + "Transformer__12-19_16:50/", "Dropout 0.2"),
     (base_path + "Transformer__12-19_21:48/", "Dropout 0.3"),
     (base_path + "Transformer__12-20_02:47/", "Dropout 0.4"),
+    (base_path + "Transformer__12-20_08:02/", "Dropout 0.5"),
 ]
 
 
 
 base_path = "/media/jonas/archive/master/data/rl_squad/experiments/"
-Rank_one_question = [
+rank_one_question = [
     ("Rank Reward One Question",0.047619,0.047619),
     (base_path + "Transformer__12-20_07:26/", "Dropout 0.2"),
+    (base_path + "Transformer__12-20_15:09/", "Dropout 0.3"),
+    (base_path + "Transformer__12-20_20:29/", "Dropout 0.4"),
+    (base_path + "Transformer__12-21_01:49/", "Dropout 0.5"),
+]
+
+base_path = "/media/jonas/archive/master/data/rl_squad/experiments/"
+rank_squad_one_question = [
+    ("Rank Reward One Question SQuAD Transformer",0.047619,0.047619),
+    (base_path + "Transformer__12-21_22:30/", "Dropout 0.2"),
+    (base_path + "Transformer__12-22_03:01/", "Dropout 0.3"),
+    (base_path + "Transformer__12-22_07:33/", "Dropout 0.4"),
+    (base_path + "Transformer__12-22_12:33/", "Dropout 0.5"),
 ]
 
 
 plots = [
-    recall_one_question
+    recall_one_question,
+    rank_one_question,
+    rank_squad_one_question,
+    #recall_rl
 ]
 
 live = True

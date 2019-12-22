@@ -18,7 +18,7 @@ dropout = 0.2 # the dropout value
 batch_size = 16
 lr = 0.00001
 epochs = 250
-encoder_layers = 5
+encoder_layers = 4
 decoder_layers = 1
 
 specs = {

@@ -63,7 +63,7 @@ class RLSquadDataloader:
 
 
         if self.eval:
-            return q_batch, relevant_documents, q_txt,q_mask
+            return q_batch, relevant_documents,q_txt, q_mask
 
         return q_batch, relevant_documents,q_mask
 

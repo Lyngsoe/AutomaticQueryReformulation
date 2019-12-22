@@ -46,7 +46,7 @@ class Trainer:
                 tqdm.write("target: {} loss: {}".format(targets,loss))
                 tqdm.write("\n")
             i_eval+=1
-            if i_eval > 100:
+            if i_eval > 500:
                 break
 
         test_loss=test_loss/i_eval
@@ -99,20 +99,21 @@ class Trainer:
                 pbar.set_description("training batches for epoch {} with training loss: {:.5f} train: {:.2f} load: {:.2f}".format(self.epoch, mbl/temp_train_iter ,total_train_time / train_iter, total_data_load_time / train_iter))
                 pbar.update()
                 start_data_load = time.time()
-                if train_iter % int(((86821 / self.batch_size)/100)) == 0:
-                    pbar.close()
-                    sentences = construct_sentence(predictions)
-                    tqdm.write("\nTRAIN:\n")
-                    for s in sentences[:4]:
-                        tqdm.write("prediction: {}".format(s))
-                    train_loss = mbl / temp_train_iter
-                    temp_train_iter = 0
-                    mbl = 0
-                    self.evaluate(train_loss,train_iter)
-                    pbar = tqdm(total=int(86821 / self.batch_size),desc="training batches for epoch {}".format(self.epoch))
-                    pbar.update(train_iter)
+                #if train_iter % int(((86821 / self.batch_size)/100)) == 0:
+                    #pbar.close()
+                    #sentences = construct_sentence(predictions)
+                    #tqdm.write("\nTRAIN:\n")
+                    #for s in sentences[:4]:
+                        #tqdm.write("prediction: {}".format(s))
+                   #train_loss = mbl / temp_train_iter
+                    #temp_train_iter = 0
+                   # mbl = 0
+                    #self.evaluate(train_loss,train_iter)
+                    #pbar = tqdm(total=int(86821 / self.batch_size),desc="training batches for epoch {}".format(self.epoch))
+                    #pbar.update(train_iter)
                     #break
-
+            train_loss = mbl / temp_train_iter
+            self.evaluate(train_loss, train_iter)
             pbar.close()
             self.epoch += 1
 

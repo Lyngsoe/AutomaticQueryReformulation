@@ -172,7 +172,7 @@ class LSTMAutoEncoder:
 
         checkpoint = torch.load(save_path+"encoder.pt")
         self.encoder.load_state_dict(checkpoint["model_state_dict"])
-        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        #self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
         checkpoint = torch.load(save_path+"decoder.pt")
         self.decoder.load_state_dict(checkpoint["model_state_dict"])

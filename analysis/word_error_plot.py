@@ -30,7 +30,7 @@ def wer(r, h):
     return d[len(r)][len(h)]
 
 
-base_path = "/media/jonas/archive/master/data/squad/cluster_exp/17_12_19/experiments/Transformer__12-16_17:45/"
+base_path = "/media/jonas/archive/master/data/squad/cluster_exp/17_12_19/experiments/LSTM_attn__12-16_21:46/"
 
 reader = jsonlines.open(base_path+"predictions.jsonl",'r')
 
@@ -42,11 +42,8 @@ for qa in reader:
     index = hypothesis.find("?")
     if index != -1:
         hypothesis = hypothesis[:index+1]
-        error = wer(ground_truth.lower().split(" "), hypothesis.lower().split(" "))
-        wers.append(error)
-        if error < 3:
-            print(ground_truth)
-            print(hypothesis)
+    error = wer(ground_truth.lower().split(" "), hypothesis.lower().split(" "))
+    wers.append(error)
     pbar.update()
 
 pbar.close()

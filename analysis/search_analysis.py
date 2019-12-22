@@ -2,7 +2,7 @@ import jsonlines
 from search_engine.elastic_search import ELSearch
 from analysis.process_results import eval
 from training.dataloaders.rl_squad_dataloader import RLSquadDataloader
-from training.dataloaders.rl_squad_sample_dataloader import RLSquadDataloader
+#from training.dataloaders.rl_squad_sample_dataloader import RLSquadDataloader
 from models.my_transformer import MyTransformer
 from models.rl_transformer import RLTransformer
 import torch
@@ -19,8 +19,8 @@ def get_documents_from_result(results):
         retrieved_documents.append(hit["_id"])
     return retrieved_documents
 
-base_path = "/media/jonas/archive/master/data/rl_squad_sub/"
-search_engine = ELSearch("squad_sub")
+base_path = "/media/jonas/archive/master/data/rl_squad/"
+search_engine = ELSearch("squad")
 
 results = []
 
@@ -55,29 +55,29 @@ specs = {
 }
 
 load_path = "/media/jonas/archive/master/data/rl_squad_sub/experiments/Transformer__12-17_22:13"
-model = RLTransformer(base_path,reward_function=None, input_size=emb_size, output_size=vocab_size, device=device, nhead=nhead,dropout=dropout, d_model=d_model, dff=dff, lr=lr)
-epoch = model.load(load_path  + "/latest/", train=True)
+#model = RLTransformer(base_path,reward_function=None, input_size=emb_size, output_size=vocab_size, device=device, nhead=nhead,dropout=dropout, d_model=d_model, dff=dff, lr=lr)
+#epoch = model.load(load_path  + "/latest/", train=True)
 
 
-eval_data = RLSquadDataloader(base_path=base_path,batch_size=1,max_length=300,eval=False)
+eval_data = RLSquadDataloader(base_path=base_path,batch_size=1,max_length=300,eval=True)
 pbar = tqdm(total=5928, desc="evaluating batches for epoch")
-for q_batch, relevant_documents, q_txt,base_rewards,q_mask in iter(eval_data):
+for q_batch, relevant_documents, q_txt,q_mask in iter(eval_data):
 
     q_emb = torch.tensor(q_batch, device=device).type(torch.float64)
     q_emb = q_emb.reshape(q_emb.size(1), 1, q_emb.size(2))
     q_mask = torch.tensor(q_mask, device=device).type(torch.float64)
 
-    predictions = model.predict(q_emb,q_mask)
+    #predictions = model.predict(q_emb,q_mask)
     #print(predictions.shape)
-    predicted_sentence = construct_sentence(predictions)
-    print(predicted_sentence)
-    sentence_cutoff = prune(predicted_sentence)
-    text = sentence_cutoff
+    #predicted_sentence = construct_sentence(predictions)
+    #print(predicted_sentence)
+    #sentence_cutoff = prune(predicted_sentence)
+    #text = sentence_cutoff
+    text = q_txt
     relevant_docs = relevant_documents[0]
     search_result = search_engine.search(text)[0]
     results_docs = get_documents_from_result(search_result)
     results.append((relevant_docs,results_docs))
     pbar.update()
-    break
 
 eval(results)

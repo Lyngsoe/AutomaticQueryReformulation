@@ -19,7 +19,7 @@ base_path = "/media/jonas/archive/master/data/rl_squad/"
 
 vocab_size = 30522
 emb_size = 768 # embedding dimension
-d_model = 256 # the dimension of the feedforward network model in nn.TransformerEncoder
+d_model = 128 # the dimension of the feedforward network model in nn.TransformerEncoder
 n_layers = 6 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
 nhead = 8 # the number of heads in the multiheadattention models
 dropout = 0.2 # the dropout value
@@ -32,16 +32,8 @@ l2 = 0
 #base_line = MovingAverage(0.42499358759755385)
 #base_line = MovingStdAverage()
 
-base_line = MovingQuestionStdAverage()
-
-info = json.load(open(base_path+"info.json"))
-pbar = tqdm(total=info["qas"],desc="loading questions")
-for q in jsonlines.open(base_path+"qas.jsonl"):
-    base_line.update([q["base_reward"]], [q["q_id"]])
-    pbar.update()
-pbar.close()
-
-reward_function = RecallRewardMean(base_line)
+base_line = MovingStdAverage()
+reward_function = RankReward(base_line)
 
 specs = {
     "vocab_size":vocab_size,
@@ -66,7 +58,7 @@ search_engine = ELSearch("squad")
 load = True
 
 if load:
-    load_path = "/media/jonas/archive/master/data/rl_squad/experiments/Transformer_q2q_medium/"
+    load_path = "/media/jonas/archive/master/data/squad/cluster_exp/17_12_19/experiments/Transformer__12-16_17:45"
     model = RLTransformer(base_path, reward_function, input_size=emb_size,num_layers=n_layers, output_size=vocab_size, device=device,nhead=nhead, dropout=dropout, d_model=d_model, dff=dff, lr=lr,l2=l2)
     epoch = model.load(load_path +"/latest",train=True)
     epoch=0
