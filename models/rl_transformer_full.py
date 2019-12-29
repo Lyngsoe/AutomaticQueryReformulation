@@ -50,8 +50,7 @@ class RLTransformer:
         self.optimizer.zero_grad()
         max_len = 20
 
-        m_out = torch.zeros(max_len, x.size(1)).cuda().long()
-        m_out[0] = torch.Tensor(x.size(1), 1).fill_(2).cuda().long()
+        m_out = torch.Tensor(1,x.size(1)).fill_(2).cuda().long()
 
         lin_in = self.pos_enc(x)
         x_mask = q_mask == 1
@@ -61,7 +60,8 @@ class RLTransformer:
             tgt_mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
             tgt_in = self.pos_enc(self.target_in(m_out[:i]))
             out = self.model(lin_in, tgt_in, tgt_mask=tgt_mask, src_key_padding_mask=x_mask)
-            m_out[i] = torch.argmax(self.linear_out(out[-1]))
+            cur_pred = torch.argmax(self.linear_out(out[-1]), dim=1)
+            m_out = torch.cat((m_out,cur_pred.unsqueeze(0)))
 
         self.preds = self.linear_out(out)
         preds_no_grad = self.preds.detach()
@@ -75,8 +75,7 @@ class RLTransformer:
         self.linear_in.eval()
         max_len = 20
 
-        m_out = torch.zeros(max_len, x.size(1)).cuda().long()
-        m_out[0] = torch.Tensor(x.size(1), 1).fill_(2).cuda().long()
+        m_out = torch.Tensor(1,x.size(1)).fill_(2).cuda().long()
 
         lin_in = self.pos_enc(x)
         x_mask = q_mask == 1
@@ -86,7 +85,9 @@ class RLTransformer:
             tgt_mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0)).cuda().double()
             tgt_in = self.pos_enc(self.target_in(m_out[:i]))
             out = self.model(lin_in, tgt_in, tgt_mask=tgt_mask, src_key_padding_mask=x_mask)
-            m_out[i] = torch.argmax(self.linear_out(out[-1]))
+            cur_pred = torch.argmax(self.linear_out(out[-1]), dim=1)
+
+            m_out = torch.cat((m_out, cur_pred.unsqueeze(0)))
 
         self.preds = self.linear_out(out)
         preds_no_grad = self.preds.detach()
